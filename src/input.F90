@@ -79,7 +79,7 @@ MODULE input_module
         !! list of dimension ids and lengths
       integer, private, dimension(:), allocatable :: start, count
         !! arguments to the NetCDF get routine
-      logical, private :: extern_start, extern_count
+      logical, private :: extern_start=.false., extern_count=.false.
         !! are start and count provided externally
       integer :: timedim, timelen
       character(len=256) :: timeunit
