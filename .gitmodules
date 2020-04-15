@@ -1,0 +1,6 @@
+[submodule "extern/GSW-Fortran"]
+	path = extern/GSW-Fortran
+	url = https://github.com/TEOS-10/GSW-Fortran.git
+[submodule "extern/flexout"]
+	path = extern/flexout
+	url = ../flexout
