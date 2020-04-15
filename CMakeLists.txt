@@ -47,4 +47,5 @@ target_link_libraries(flom PUBLIC output_manager field_manager netcdf gsw_static
 
 include(src/CMakeLists.txt)
 include(tests/CMakeLists.txt)
+include(geostrophic/CMakeLists.txt)
 
