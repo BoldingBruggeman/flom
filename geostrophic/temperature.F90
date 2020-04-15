@@ -1,6 +1,6 @@
 ! Copyright (C) 2020 Bolding & Bruggeman
 
-!!{!./example/code/temperature.md!}
+!!{!./geostrophic/code/temperature.md!}
 !! @todo
 !! check if temperature is in-situ or potential - in any case convert to conservative
 

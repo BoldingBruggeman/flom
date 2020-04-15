@@ -1,6 +1,6 @@
 ! Copyright (C) 2020 Bolding & Bruggeman
 
-!!{!./example/code/geostrophic.md!}
+!!{!./geostrophic/code/geostrophic.md!}
 
 !! https://www.mdpi.com/2072-4292/10/5/715/htm
 

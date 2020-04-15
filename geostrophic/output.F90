@@ -1,6 +1,6 @@
 ! Copyright (C) 2020 Bolding & Bruggeman
 
-!!{!./example/code/output.md!}
+!!{!./geostrophic/code/output.md!}
 
 MODULE geostrophic_output
 

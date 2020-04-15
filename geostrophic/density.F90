@@ -1,6 +1,6 @@
 ! Copyright (C) 2020 Bolding & Bruggeman
 
-!!{!./example/code/density.md!}
+!!{!./geostrophic/code/density.md!}
 
 MODULE geostrophic_density
 

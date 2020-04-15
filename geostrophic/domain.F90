@@ -1,6 +1,6 @@
 ! Copyright (C) 2020 Bolding & Bruggeman
 
-!!{!./example/code/domain.md!}
+!!{!./geostrophic/code/domain.md!}
 
 MODULE geostrophic_domain
 

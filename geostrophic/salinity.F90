@@ -1,6 +1,6 @@
 ! Copyright (C) 2020 Bolding & Bruggeman
 
-!!{!./example/code/salinity.md!}
+!!{!./geostrophic/code/salinity.md!}
 !! @todo
 !! check is salinity is in-situ or potential - in any case convert to absolute
 

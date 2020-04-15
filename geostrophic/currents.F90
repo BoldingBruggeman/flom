@@ -1,6 +1,6 @@
 ! Copyright (C) 2020 Bolding & Bruggeman
 
-!!{!./example/code/currents.md!}
+!!{!./geostrophic/code/currents.md!}
 
 MODULE geostrophic_currents
 

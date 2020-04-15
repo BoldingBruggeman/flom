@@ -1,6 +1,6 @@
 ! Copyright (C) 2020 Bolding & Bruggeman
 
-!!{!./example/code/main.md!}
+!!{!./geostrophic/code/main.md!}
 
 PROGRAM geostrophic
 

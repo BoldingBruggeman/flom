@@ -1,6 +1,6 @@
 ! Copyright (C) 2020 Bolding & Bruggeman
 
-!!{!./example/code/physics.md!}
+!!{!./geostrophic/code/physics.md!}
 
 MODULE geostrophic_physics
    !! Description:

@@ -1,6 +1,6 @@
 ! Copyright (C) 2020 Bolding & Bruggeman
 
-!!{!./example/code/pressure.md!}
+!!{!./geostrophic/code/pressure.md!}
 
 MODULE geostrophic_pressure
 

@@ -1,6 +1,6 @@
 ! Copyright (C) 2020 Bolding & Bruggeman
 
-!!{!./example/code/input.md!}
+!!{!./geostrophic/code/input.md!}
 
 MODULE geostrophic_input
 

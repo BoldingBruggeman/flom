@@ -1,6 +1,6 @@
 ! Copyright (C) 2020 Bolding & Bruggeman
 
-!!{!./example/code/dynamics.md!}
+!!{!./geostrophic/code/dynamics.md!}
 
 MODULE geostrophic_dynamics
    !! Description:
