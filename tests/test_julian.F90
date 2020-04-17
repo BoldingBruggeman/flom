@@ -9,74 +9,51 @@ PROGRAM test_julian
 
    USE, INTRINSIC :: ISO_FORTRAN_ENV
    use datetime_module
-!   use geostrophic_output
+   use julian_days
 
    IMPLICIT NONE
-
-!  Local constants
-   integer, parameter :: rjd=2400000
 
 !  Local variables
    integer :: jd=0,n
-   type(datetime) :: epoch,t
+   integer :: y,m,d
+   integer, dimension(3) :: ys,ms,ds,jds
+   type(datetime) :: t1,t2
    type(timedelta) :: dt
+   type(datetime) :: ts(3)
 !---------------------------------------------------------------------------
-   epoch = datetime(1858,11,17,0)
+   call init_epoch()
    call julian_day(1858,11,17,jd)
-   write(*,*) 'epoch: ',epoch%isoformat(),' ',jd
-   t=datetime(2000,01,01)
+   call calendar_date(jd,y,m,d)
+   t1=datetime(year=y,month=m,day=d)
+   write(*,*) 'epoch: ',t1%isoformat(),' ',jd
+   t2=datetime(2000,01,01)
    call julian_day(2000,01,01,n)
-   write(*,*) 't:     ',t%isoformat(),' ',n
-   dt = t-epoch
-   write(*,*) 'dt = ',nint(dt%total_seconds()/86400),n-jd
+   write(*,*) 't2:    ',t2%isoformat(),' ',n
+   dt = t2-t1
+   write(*,*) 'dt= ',nint(dt%total_seconds()/86400),n-jd
 
-contains
-
-!-----------------------------------------------------------------------------
-
-SUBROUTINE julian_day(yyyy,mm,dd,julian)
-   !! Return the julian day based on year, month and day
-
-   IMPLICIT NONE
-
-!  Subroutine arguments
-   integer, intent(in) :: yyyy,mm,dd
-   integer, intent(out)  :: julian
-
-!  Local constants
-
-!  Local variables
-   type(datetime) :: t
-   type(timedelta) :: dt
-!-----------------------------------------------------------------------------
-   t = datetime(yyyy,mm,dd)
-   dt = t-epoch
-   julian = nint(dt%total_seconds()/86400)+rjd
-   return
-END SUBROUTINE julian_day
-
-!-----------------------------------------------------------------------------
-
-SUBROUTINE calendar_date(julian,yyyy,mm,dd)
-   !! Return year, month and day for the julian day
-
-   IMPLICIT NONE
-
-!  Subroutine arguments
-   integer, intent(in)  :: julian
-   integer, intent(out) :: yyyy,mm,dd
-
-!  Local constants
-
-!  Local variables
-   type(datetime) :: t
-!-----------------------------------------------------------------------------
-   t=epoch+timedelta(days=julian-rjd)
-   yyyy=t%getYear()
-   mm=t%getMonth()
-   dd=t%getDay()
-   return
-END SUBROUTINE calendar_date
-
+   write(*,*)
+   write(*,*) 'the Julian day routines are elemental'
+   ys = (/ 1900, 1950, 2000 /)
+   ms = 1
+   ds = 1
+   call julian_day(ys,ms,ds,jds)
+   write(*,*) jds
+   write(*,*)
+   write(*,*) 'add 1 day'
+   jds = jds+1
+   write(*,*) jds
+   write(*,*)
+   write(*,*) 'and overloaded - yyyy, mm, dd'
+   call calendar_date(jds,ys,ms,ds)
+   write(*,*) ys
+   write(*,*) ms
+   write(*,*) ds
+   write(*,*)
+   write(*,*) '... datetime objects'
+   call calendar_date(jds,ts)
+   do n=1,size(ts)
+      write(*,*) n,jds(n),ts(n)%isoformat()
+   end do
 
 END PROGRAM test_julian
