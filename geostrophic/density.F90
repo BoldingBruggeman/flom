@@ -177,7 +177,7 @@ SUBROUTINE buoyancy_calculate(self)
       do j=jmin,jmax
          do i=imin,imax
             if (self%domain%A%mask(i,j,k) > 0) then
-               self%buoy(i,j,k) = x*(self%rho(i,j,k)-rho_0)
+               self%buoy(i,j,k) = -x*(self%rho(i,j,k)-rho_0)
             end  if
          end do
       end do
