@@ -165,6 +165,7 @@ SUBROUTINE pressure_internal(self,buoy)
 
 !  Local variables
    integer :: i,j,k
+   real(real64) :: dz
 !---------------------------------------------------------------------------
    call self%logs%info('pressure_internal()',level=3)
    k=self%domain%A%l(3)
@@ -181,23 +182,24 @@ SUBROUTINE pressure_internal(self,buoy)
       do j=self%domain%A%l(2),self%domain%A%u(2)
          do i=self%domain%A%l(1)+1,self%domain%A%u(1)-1
             if (self%domain%A%mask(i,j,k) == 1) then
+               dz=self%domain%A%depth(k)-self%domain%A%depth(k-1)
                self%idpdx(i,j,k) = 0._real64
                if (self%domain%A%mask(i-1,j,k) == 1 .and. self%domain%A%mask(i+1,j,k) == 1) then
                   self%idpdx(i,j,k) = self%idpdx(i,j,k-1) &
                              +(buoy(i+1,j,k)-buoy(i-1,j,k)) &
-                             /(self%domain%A%dx(j)+self%domain%A%dx(j))*self%domain%A%depth(k)
+                             /(self%domain%A%dx(j)+self%domain%A%dx(j))*dz
                   cycle
                end if
                if (self%domain%A%mask(i-1,j,k) == 0 .and. self%domain%A%mask(i+1,j,k) == 1) then
                   self%idpdx(i,j,k) = self%idpdx(i,j,k-1) &
                              +(buoy(i+1,j,k)-buoy(i,j,k)) &
-                             /(self%domain%A%dx(j))*self%domain%A%depth(k)
+                             /(self%domain%A%dx(j))*dz
                   cycle
                end if
                if (self%domain%A%mask(i-1,j,k) == 1 .and. self%domain%A%mask(i+1,j,k) == 0) then
                   self%idpdx(i,j,k) = self%idpdx(i,j,k-1) &
                              +(buoy(i,j,k)-buoy(i-1,j,k)) &
-                             /(self%domain%A%dx(j))*self%domain%A%depth(k)
+                             /(self%domain%A%dx(j))*dz
                   cycle
                end if
             end if
@@ -215,23 +217,24 @@ SUBROUTINE pressure_internal(self,buoy)
       do j=self%domain%A%l(2)+1,self%domain%A%u(2)-1
          do i=self%domain%A%l(1),self%domain%A%u(1)
             if (self%domain%A%mask(i,j,k) == 1) then
+               dz=self%domain%A%depth(k)-self%domain%A%depth(k-1)
                self%idpdy(i,j,k) = 0._real64
                if (self%domain%A%mask(i,j-1,k) == 1 .and. self%domain%A%mask(i,j+1,k) == 1) then
                   self%idpdy(i,j,k) = self%idpdy(i,j,k-1) &
                              +(buoy(i,j+1,k)-buoy(i,j-1,k)) &
-                             /(self%domain%A%dy(j)+self%domain%A%dy(j))*self%domain%A%depth(k)
+                             /(self%domain%A%dy(j)+self%domain%A%dy(j))*dz
                   cycle
                end if
                if (self%domain%A%mask(i,j-1,k) == 0 .and. self%domain%A%mask(i,j+1,k) == 1) then
                   self%idpdy(i,j,k) = self%idpdy(i,j,k-1) &
                              +(buoy(i,j+1,k)-buoy(i,j,k)) &
-                             /(self%domain%A%dy(j))*self%domain%A%depth(k)
+                             /(self%domain%A%dy(j))*dz
                   cycle
                end if
                if (self%domain%A%mask(i,j-1,k) == 1 .and. self%domain%A%mask(i,j+1,k) == 0) then
                   self%idpdy(i,j,k) = self%idpdy(i,j,k-1) &
                              +(buoy(i,j,k)-buoy(i,j-1,k)) &
-                             /(self%domain%A%dy(j))*self%domain%A%depth(k)
+                             /(self%domain%A%dy(j))*dz
                   cycle
                end if
             end if
