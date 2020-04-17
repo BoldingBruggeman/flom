@@ -6,6 +6,7 @@ MODULE geostrophic_output
 
    USE, INTRINSIC :: ISO_FORTRAN_ENV
    use datetime_module
+   use julian_days, only: init_epoch, jd=>julian_day, cal=>calendar_date
    use logging
    use field_manager
    use output_manager_core, only:output_manager_host=>host, type_output_manager_host=>type_host
@@ -18,11 +19,11 @@ MODULE geostrophic_output
    PRIVATE  ! Private scope by default
 
 !  Module constants
-   integer, parameter :: rjd=2400000
+!   integer, parameter :: rjd=2400000
      !! Modified Julian Day - 0h Nov 16, 1858
 
 !  Module types and variables
-   type(datetime) :: epoch
+!   type(datetime) :: epoch
       !! used as reference time for Julian Days calculations
 
    type, public, extends(type_output_manager_host) :: type_geostrophic_output
@@ -58,7 +59,7 @@ SUBROUTINE configure_output(self,logs)
 !-----------------------------------------------------------------------------
    self%logs => logs
    call self%logs%info('output_configure()',level=1)
-   epoch = datetime(1858,11,17,0)
+   call init_epoch()
    return
 END SUBROUTINE configure_output
 
@@ -100,12 +101,11 @@ SUBROUTINE do_output(self,t)
 ! Local constants
 
 ! Local variables
-  integer :: jd,n=1
+  integer :: julday,n=1
 !-----------------------------------------------------------------------------
    call self%logs%info('do_output()',level=3)
-   call self%julian_day(t%getYear(),t%getMonth(),t%getDay(),jd)
-   call output_manager_save(jd,0,n)
-!   write(*,*) t%isoformat(),' ',jd
+   call self%julian_day(t%getYear(),t%getMonth(),t%getDay(),julday)
+   call output_manager_save(julday,0,n)
    n=n+1
    return
 END SUBROUTINE do_output
@@ -121,16 +121,8 @@ SUBROUTINE geostrophic_julian_day(self,yyyy,mm,dd,julian)
    class(type_geostrophic_output), intent(in) :: self
    integer, intent(in) :: yyyy,mm,dd
    integer, intent(out)  :: julian
-
-!  Local constants
-
-!  Local variables
-   type(datetime) :: t
-   type(timedelta) :: dt
 !-----------------------------------------------------------------------------
-   t = datetime(yyyy,mm,dd)
-   dt = t-epoch
-   julian = nint(dt%total_seconds()/86400)+rjd
+   call jd(yyyy,mm,dd,julian)
    return
 END SUBROUTINE geostrophic_julian_day
 
@@ -145,16 +137,8 @@ SUBROUTINE geostrophic_calendar_date(self,julian,yyyy,mm,dd)
    class(type_geostrophic_output), intent(in) :: self
    integer, intent(in)  :: julian
    integer, intent(out) :: yyyy,mm,dd
-
-!  Local constants
-
-!  Local variables
-   type(datetime) :: t
 !-----------------------------------------------------------------------------
-   t=epoch+timedelta(days=julian-rjd)
-   yyyy=t%getYear()
-   mm=t%getMonth()
-   dd=t%getDay()
+   call cal(julian,yyyy,mm,dd)
    return
 END SUBROUTINE geostrophic_calendar_date
 
