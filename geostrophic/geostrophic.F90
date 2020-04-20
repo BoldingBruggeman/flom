@@ -65,10 +65,37 @@ SUBROUTINE geostrophic_settings(self)
    character(len=256), parameter :: time_format='%Y-%m-%d %H:%M:%S' 
 
 !  Local variables
-   TYPE(timedelta) :: timediff
+   integer :: stat
 !---------------------------------------------------------------------------
    self%logs%prepend = ''
    call self%logs%info('geostrophic_settings()')
+   CALL get_environment_variable("WOA_DIR", self%input%datadir, status=stat, &
+                                 trim_name=.true.)
+   if (stat == 1) then
+      write(*,*) 'Need to set WOA_DIR to the folder where WOA data are stored'
+      stop 1
+   end if
+   call self%logs%info('World Ocean Atlas data:',level=1)
+   call self%logs%info('data directory: ',msg2=trim(self%input%datadir),level=2)
+   CALL get_environment_variable("WOA_RESOLUTION", self%input%resolution, &
+                                 status=stat)
+   if (stat == 0) then
+      select case (self%input%resolution(1:1))
+         case ('l')
+            self%input%a = '5d'
+            call self%logs%info('resolution: ',msg2='l(ow)',level=2)
+         case ('m')
+            self%input%a = '01'
+            call self%logs%info('resolution: ',msg2='m(edium)',level=2)
+         case ('h')
+            self%input%a = '04'
+            call self%logs%info('resolution: ',msg2='h(igh)',level=2)
+      end select
+   else
+      self%input%resolution(1:1) = 'm'
+      self%input%a = '01'
+      call self%logs%info('resolution: ',msg2='m(edium)',level=2)
+   end if   
    return
 END SUBROUTINE geostrophic_settings
 
@@ -86,19 +113,34 @@ SUBROUTINE geostrophic_configure(self)
 
 ! Local variables
    integer :: length
-!   integer :: imin=1,imax=460,jmin=1,jmax=480,kmin=1,kmax=52
    integer :: imin,imax,jmin,jmax,kmin,kmax
    integer :: lon0,lon1,lat0,lat1
 !-----------------------------------------------------------------------------
    self%logs%prepend = ''
    call self%logs%info('geostrophic_configure()')
 
-   self%start=(/80, 35 ,1, 1/)
-   self%count=(/120, 110 ,57, 1/)
+#if 1
+   select case (self%input%resolution(1:1))
+      case ('l')
+         self%start=(/1, 1, 1, 1/)
+         self%count=(/72, 36 ,57, 1/)
+         stop 'low resolution WOA does not work yet - in-complete S and T'
+      case ('m')
+         self%start=(/1, 1 ,1, 1/)
+         self%count=(/360, 180 ,57, 1/)
+      case ('h')
+         self%start=(/1, 1 ,1, 1/)
+         self%count=(/1440, 720 ,57, 1/)
+   end select
    imin=1; imax=self%count(1)
    jmin=1; jmax=self%count(2)
    kmin=1; kmax=self%count(3)
-   write(*,*) imin,imax,jmin,jmax,kmin,kmax
+#else   
+   if (command_argument_count() .ne. 6) then
+      write(*,*) 'ERROR, must be called like:'
+      STOP ' ./geostrophic lon0 lat0<start> <stop> - timeformat "yyyy-mm-dd hh:mi:ss"'
+   end if
+#endif   
 
    call self%input%configure(self%logs,start=self%start,count=self%count) 
 
@@ -106,8 +148,6 @@ SUBROUTINE geostrophic_configure(self)
                               imin=imin,imax=imax, &
                               jmin=jmin,jmax=jmax, &
                               kmin=kmin,kmax=kmax)
-!                              kmin=kmin,kmax=kmax, &
-!                              halo=(/0,0,0/))
    ! now we can configure the field_manager
    call self%fm%register_dimension('lon',imax-imin+1,id=id_dim_lon)
    call self%fm%register_dimension('lat',jmax-jmin+1,id=id_dim_lat)
@@ -175,7 +215,7 @@ SUBROUTINE geostrophic_integrate(self)
       call self%logs%info(sim_time % strftime('%Y-%m-%d'),level=2)
       call self%input%update(n)
       call self%physics%temperature%update()
-      where(self%physics%temperature%T .lt. 100._real64) self%domain%A%mask=1
+      where(self%physics%temperature%T .lt. 100._real64 .and. self%physics%salinity%S .lt. 100._real64) self%domain%A%mask=1
       call self%physics%salinity%update()
       call self%physics%density%calculate(self%physics%salinity%S, &
                                           self%physics%temperature%T )

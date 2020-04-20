@@ -18,12 +18,16 @@ MODULE geostrophic_input
 !  Module constants
 
 !  Module types and variables
+   character(len=*), parameter :: basename="woa18_decav_"
 
    type, public :: type_geostrophic_input
       class(type_logging), pointer :: logs
       class(type_geostrophic_domain), pointer :: domain
       class(type_netcdf_input), allocatable :: lat,lon,depth
       class(type_netcdf_input), dimension(:), allocatable :: Tinput,Sinput
+      character(len=128) :: datadir
+      character(len=8) :: resolution
+      character(len=2) :: a
       contains
       procedure :: configure => configure_input
       procedure :: initialize => initialize_input
@@ -89,7 +93,7 @@ SUBROUTINE initialize_input(self,domain,S,T)
 !-----------------------------------------------------------------------------
    call self%logs%info('input_initialize()',level=1)
    self%domain => domain
-   write(path,'(A,I2.2,A)') '/data/kb/FLOM/woa18_decav_t',1,'_01.nc'
+   write(path,'(3A,I2.2,3A)') trim(self%datadir),basename,'t',1,'_',self%a,'.nc'
    self%lon%f = path; self%lon%v = 'lon'
    call self%lon%initialize()
    self%lon%p1dreal64 => self%domain%A%lon
@@ -104,14 +108,22 @@ SUBROUTINE initialize_input(self,domain,S,T)
    call self%depth%get(); call self%depth%close()
 
    do n=1,12
-      write(path,'(A,I2.2,A)') '/data/kb/FLOM/woa18_decav_s',n,'_01.nc'
+      write(path,'(3A,I2.2,3A)') trim(self%datadir),basename,'s',n,'_',self%a,'.nc'
       self%Sinput(n)%f = path
-      self%Sinput(n)%v = 's_an'
+      if (self%resolution(1:1) == 'l') then
+         self%Sinput(n)%v = 's_mn'
+      else
+         self%Sinput(n)%v = 's_an'
+      end if
       call self%Sinput(n)%initialize()
 
-      write(path,'(A,I2.2,A)') '/data/kb/FLOM/woa18_decav_t',n,'_01.nc'
+      write(path,'(3A,I2.2,3A)') trim(self%datadir),basename,'t',n,'_',self%a,'.nc'
       self%Tinput(n)%f = path
-      self%Tinput(n)%v = 't_an'
+      if (self%resolution(1:1) == 'l') then
+         self%Tinput(n)%v = 't_mn'
+      else
+         self%Tinput(n)%v = 't_an'
+      end if
       call self%Tinput(n)%initialize()
 
       self%Sinput(n)%p3dreal64 => S
