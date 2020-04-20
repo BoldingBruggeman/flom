@@ -13,6 +13,10 @@
 !> this needs to be fixed - i.e. units equal months
 !> @endnote
 !>
+!> @bug
+!> need to fix scale_factor and add_offset when types are different
+!> check WOA cordinate variables
+!> @endbug
 
 MODULE input_module
 
@@ -69,6 +73,8 @@ MODULE input_module
         !! variable id
       integer, private :: time_var_id
       !! time variable id associated with variable id
+      integer, public :: time_index
+      !! the index in the dimension array that holds the time dimension
       integer :: ndims
         !! number of dimensions
       integer, private :: time_dim_id, unlimdimid 
@@ -85,11 +91,11 @@ MODULE input_module
       character(len=256) :: timeunit
       real(real64), dimension(:), allocatable :: times
         !! time variable if present
-        !!https://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
+        !! https://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
         !! https://www.cl.cam.ac.uk/~mgk25/iso-time.html
-        type(datetime), dimension(:), allocatable :: datetimes
-        type(timedelta), dimension(:), allocatable :: timedeltas
+      type(datetime), dimension(:), allocatable :: datetimes
         !! time variable if present
+      integer :: cur=-1
       integer, private :: myreader 
         !! used in selct case to get the right NetCDF reader
       integer(int32), pointer :: pscalarint32 => null()
@@ -110,6 +116,10 @@ MODULE input_module
       real(real64), dimension(:,:,:), pointer :: p3dreal64 => null()
       real(real64), dimension(:,:,:,:), pointer :: p4dreal64 => null()
 
+      real(int32) :: scale_factor_int32=1._int32, add_offset_int32=0._int32
+      real(real32) :: scale_factor_real32=1._real32, add_offset_real32=0._real32
+      real(real64) :: scale_factor_real64=1._real64, add_offset_real64=0._real64
+
       contains
 
       procedure :: configure => configure_netcdf_input
@@ -118,6 +128,7 @@ MODULE input_module
 !      procedure, deferred :: get => get_netcdf_input
 !      procedure :: getsize => get_netcdf_variable_size
       procedure :: get => get_netcdf_input
+      procedure :: next => get_next
       procedure :: close => close_netcdf_input
 
    end type type_netcdf_input
@@ -221,18 +232,21 @@ SUBROUTINE initialize_netcdf_input(self)
    if (rc == nf90_noerr) then
       ! check if time dimension is the unlimmited dimension (if any)
       call check(nf90_inquire_dimension(self%ncid, self%time_dim_id, len=self%timelen))
+      do n=1,self%ndims
+         if (self%dimids(n) == self%time_dim_id) exit
+      end do
+      self%time_index=n
    end if
 
    rc =  nf90_inq_varid(self%ncid,'time',self%time_var_id)
    if(rc == nf90_noerr) then 
       call check(nf90_get_att(self%ncid,self%time_var_id,"units",self%timeunit))
       allocate(self%times(self%timelen))
-      allocate(self%timedeltas(self%timelen))
       allocate(self%datetimes(self%timelen))
       call check(nf90_get_var(self%ncid, self%time_var_id, self%times))
       self%epoch = strptime( trim(self%timeunit(index(self%timeunit,'since')+5:)), trim(self%strp_format) )
 
-      call datetime_conversion(self%epoch,trim(self%timeunit),self%times,self%timedeltas,self%datetimes)
+      call datetime_conversion(self%epoch,trim(self%timeunit),self%times,self%datetimes)
       self%first_time = self%datetimes(1)
       self%last_time =  self%datetimes(self%timelen)
    else
@@ -276,9 +290,19 @@ SUBROUTINE print_info_netcdf_input(self)
       write(*,*) '   first=       ',self%first_time%isoformat() 
       write(*,*) '   last=        ',self%last_time%isoformat() 
       if (self%timelen .lt. 4) then
-         write(*,*) '   time(s)= ',self%times
+         write(*,*) '   time(s)= '
+         do n=1,self%timelen
+            write(*,*) '              ',self%times(n),self%datetimes(n)%isoformat()
+         end do
       else
-         write(*,*) '   times=   ',self%times(1:2),' ... ',self%times(self%timelen-1:self%timelen)
+         n=self%timelen
+         write(*,*) '   times=   '
+         write(*,*) '              ',self%times(1),self%datetimes(1)%isoformat()
+         write(*,*) '              ',self%times(2),self%datetimes(2)%isoformat()
+         write(*,*) '             :'
+         write(*,*) '             :'
+         write(*,*) '              ',self%times(n-1),self%datetimes(n-1)%isoformat()
+         write(*,*) '              ',self%times(n),self%datetimes(n)%isoformat()
       end if
    else
       write(*,*) 'no associated time information'
@@ -292,7 +316,7 @@ END SUBROUTINE print_info_netcdf_input
 
 !-----------------------------------------------------------------------------
 
-SUBROUTINE datetime_conversion(epoch,timeunit,times,timedeltas,datetimes)
+SUBROUTINE datetime_conversion(epoch,timeunit,times,datetimes)
    !! Convert NetCDF time information to timedelta objects
 
    IMPLICIT NONE
@@ -301,76 +325,29 @@ SUBROUTINE datetime_conversion(epoch,timeunit,times,timedeltas,datetimes)
    type(datetime), intent(inout) :: epoch
    character(len=*), intent(in) :: timeunit
    real(real64), dimension(:), intent(in) :: times
-   type(timedelta), dimension(:), intent(inout) :: timedeltas
    type(datetime), dimension(:), intent(inout) :: datetimes
 
 !  Local constants
 
 !  Local variables
-   integer :: years=0,months=0,days=0,hours=0
-   integer :: minutes=0,seconds=0,milliseconds=0
-   integer :: m,n,ndays
+   real(real64) :: dt
+   real(real64), dimension(:), allocatable :: t
 !-----------------------------------------------------------------------------
+   dt = date2num(epoch)
    if (index(timeunit,'milliseconds') .ne. 0) then
-      write(*,*) 'using milliseconds'
-      do n=1,size(times)
-         milliseconds=int(times(n))
-         timedeltas(n)=timedelta(milliseconds=milliseconds)
-         datetimes(n)=epoch+timedeltas(n)
-      end do
+      t=dt+times/(1000._real64*86400._real64)
    else if (index(timeunit,'seconds') .ne. 0) then
-!      write(*,*) 'using seconds'
-      do n=1,size(times)
-         seconds=int(times(n))
-         milliseconds=int(1000*(times(n)-seconds))
-         timedeltas(n)=timedelta(seconds=seconds, &
-                                 milliseconds=milliseconds)
-         datetimes(n)=epoch+timedeltas(n)
-      end do
+      t=dt+times/(86400._real64)
    else if (index(timeunit,'minutes') .ne. 0) then
-!      write(*,*) 'using minutes'
-      do n=1,size(times)
-         minutes=int(times(n))
-         timedeltas(n)=timedelta(minutes=minutes, &
-                                 seconds=seconds, &
-                                 milliseconds=milliseconds)
-         datetimes(n)=epoch+timedeltas(n)
-      end do
+      t=dt+times/(1440._real64)
    else if (index(timeunit,'hours') .ne. 0) then
-!      write(*,*) 'using hours'
-      do n=1,size(times)
-         hours=int(times(n))
-         timedeltas(n)=timedelta(hours=hours, &
-                                 minutes=minutes, &
-                                 seconds=seconds, &
-                                 milliseconds=milliseconds)
-         datetimes(n)=epoch+timedeltas(n)
-      end do
+      t=dt+times/(24._real64)
    else if (index(timeunit,'days').ne. 0) then
-!      write(*,*) 'using days'
-      do n=1,size(times)
-         days=int(times(n))
-         timedeltas(n)=timedelta(days=days, &
-                                 hours=hours, &
-                                 minutes=minutes, &
-                                 seconds=seconds, &
-                                 milliseconds=milliseconds)
-         datetimes(n)=epoch+timedeltas(n)
-      end do
+      t=dt+times
    else if (index(timeunit,'months').ne. 0) then
-!      write(*,*) 'using months'
-      do n=1,size(times)
-         days=int(30*(times(n)-int(times(n))))
-         timedeltas(n)=timedelta(days=days, &
-                                 hours=hours, &
-                                 minutes=minutes, &
-                                 seconds=seconds, &
-                                 milliseconds=milliseconds)
-         datetimes(n)=epoch+timedeltas(n)
-      end do
-   else
-      stop 'initialize_netcdf_input - cant find egon'
+      t=dt+times*30._real64
    end if
+   datetimes=num2date(t)
    return
 END SUBROUTINE datetime_conversion
 
@@ -388,28 +365,97 @@ SUBROUTINE get_netcdf_input(self,error_handler)
 ! Local constants
 
 ! Local variables
-   integer, dimension(2) :: start, count
+  integer :: stat
 !-----------------------------------------------------------------------------
-!KB   call self%print_info()
-
    if (associated(self%p1dreal64)) then
       call check(nf90_get_var(self%ncid,self%varid,self%p1dreal64, &
                               start=self%start(1:self%ndims), &
                               count=self%count(1:self%ndims)))
+!      if(self%scale_factor_int32 \= 1._int32 .or. &
+!         self%add_offset_int32 \= 0._int32) then
+#if 0
+      stat = nf90_get_att(self%ncid, self%varid, "scale_factor", &
+                          self%scale_factor_real64)
+      stat = nf90_get_att(self%ncid, self%varid, "add_offset", &
+                          self%add_offset_real64)
+      if(self%scale_factor_real64 /= 1._real64 .or. &
+         self%add_offset_real64 /= 0._real64) then
+         self%p1dreal64 = self%scale_factor_real64*self%p1dreal64 &
+                         +self%add_offset_real64
+      end if
+           write(*,*) self%p1dreal64
+           stop
+#endif           
    end if 
    if (associated(self%p2dreal64)) then
       call check(nf90_get_var(self%ncid, self%varid, self%p2dreal64, &
                               start=self%start(1:self%ndims), &
                               count=self%count(1:self%ndims)))
+#if 0
+      stat = nf90_get_att(self%ncid, self%varid, "scale_factor", &
+                          self%scale_factor_real64)
+      stat = nf90_get_att(self%ncid, self%varid, "add_offset", &
+                          self%add_offset_real64)
+!      if(self%scale_factor_real32 \= 1._real32 .or. &
+!         self%add_offset_real32 \= 0._real32) then
+      if(self%scale_factor_real64 /= 1._real64 .or. &
+         self%add_offset_real64 /= 0._real64) then
+         self%p2dreal64 = self%scale_factor_real64*self%p2dreal64 &
+                         +self%add_offset_real64
+      end if
+#endif           
    end if 
    if (associated(self%p3dreal64)) then
       call check(nf90_get_var(self%ncid, self%varid, self%p3dreal64, &
                               start=self%start(1:self%ndims), &
                               count=self%count(1:self%ndims)))
+#if 0
+      stat = nf90_get_att(self%ncid, self%varid, "scale_factor", &
+                          self%scale_factor_real64)
+      stat = nf90_get_att(self%ncid, self%varid, "add_offset", &
+                          self%add_offset_real64)
+      if(self%scale_factor_real64 /= 1._real64 .or. &
+         self%add_offset_real64 /= 0._real64) then
+         self%p3dreal64 = self%scale_factor_real64*self%p3dreal64 &
+                         +self%add_offset_real64
+      end if
+#endif           
    end if 
-
    return
 END SUBROUTINE get_netcdf_input
+
+!-----------------------------------------------------------------------------
+
+SUBROUTINE get_next(self,stat)
+   !! Get the next field in the file
+
+   IMPLICIT NONE
+
+! Subroutine arguments
+   class(type_netcdf_input), intent(inout) :: self
+   integer, intent(inout) :: stat
+
+! Local constants
+
+! Local variables
+!   integer, dimension(:), allocatable :: start, count
+   integer :: n
+!-----------------------------------------------------------------------------
+   if (self%cur == -1) then
+     self%cur = 1 ! first data set to read
+   else
+      self%cur=self%cur+1
+   end if
+   if (self%cur .gt. self%timelen) then
+      stat=1
+      return
+   end if   
+   self%start(self%time_index)=self%cur
+   self%count(self%time_index)=1
+   call self%get()
+   stat=0
+   return
+END SUBROUTINE get_next
 
 !-----------------------------------------------------------------------------
 

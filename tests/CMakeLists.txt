@@ -12,6 +12,12 @@ add_executable(test_input EXCLUDE_FROM_ALL
 target_link_libraries(test_input PRIVATE flom )
 add_dependencies( test_all_flom ${test_all_flom} test_input )
 
+add_executable(test_read_netcdf EXCLUDE_FROM_ALL
+               ${CMAKE_CURRENT_LIST_DIR}/test_read_netcdf.F90
+              )
+target_link_libraries(test_read_netcdf PRIVATE flom )
+add_dependencies( test_all_flom ${test_all_flom} test_read_netcdf )
+
 add_executable(test_memory_manager EXCLUDE_FROM_ALL
                ${CMAKE_CURRENT_LIST_DIR}/test_memory_manager.F90
               )

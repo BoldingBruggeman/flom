@@ -15,6 +15,7 @@ PROGRAM test_input
 
 !  Local variables
    TYPE(type_netcdf_input) :: input
+   integer :: stat
 !-----------------------------------------------------------------------
 
    if (command_argument_count() .ne. 2 ) then
@@ -26,6 +27,7 @@ PROGRAM test_input
    call get_command_argument(2,input%v)
    call input%initialize()
    call input%print_info()
+!   call input%next(stat)
    !input%strptime = '%Y-%m-%d %H:%M:%S' 
 
 !-----------------------------------------------------------------------
