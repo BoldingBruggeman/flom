@@ -83,13 +83,7 @@ SUBROUTINE salinity_initialize(self,domain)
 !---------------------------------------------------------------------------
    call self%logs%info('salinity_initialize()',level=2)
    self%domain => domain
-   write(*,*) self%domain%A%l
-   write(*,*) self%domain%A%u
    call mm_s('S',self%S,self%domain%A%l,self%domain%A%u,def=35._real64,stat=stat)
-   write(*,*) self%domain%A%l
-   write(*,*) self%domain%A%u
-   write(*,*) 'stat= ',stat
-!   stop 'kaj'
    call self%fm%register('salt', 'kg/kg', 'absolute salinity', &
                           standard_name='sea_water_absolute_salinity', &
                           dimensions=(/id_dim_z/), &

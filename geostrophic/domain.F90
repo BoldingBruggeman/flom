@@ -113,18 +113,14 @@ SUBROUTINE domain_configure(self,logs,fm,imin,imax,jmin,jmax,kmin,kmax)
 !  Local variables
 !-----------------------------------------------------------------------
    call logs%info('domain_configure()',level=1)
-   write(*,*) imin,imax,jmin,jmax,kmin,kmax
    self%fm => fm
    call self%A%type_3d_grid%create(imin=imin,imax=imax,jmin=jmin,jmax=jmax,kmin=kmin,kmax=kmax)
-!   call self%A%configure(logs,imin=imin,imax=imax,jmin=jmin,jmax=jmax,kmin=kmin,kmax=kmax)
    call self%allocate()
-!stop 'egon'
    return
 END SUBROUTINE domain_configure
 
 !-----------------------------------------------------------------------------
 
-!SUBROUTINE domain_initialize(self,logs,imin,imax,jmin,jmax,kmin,kmax)
 SUBROUTINE domain_initialize(self)
    !! Configure the domain 
 
@@ -132,11 +128,6 @@ SUBROUTINE domain_initialize(self)
 
 !  Subroutine arguments
    class(type_geostrophic_domain), intent(inout) :: self
-!   class(type_logging), intent(in) :: logs
-!   integer, intent(in), optional :: imin,imax
-!   integer, intent(in), optional :: jmin,jmax
-!   integer, intent(in), optional :: kmin,kmax
-!KB   integer, intent(in), dimension(3), optional :: halo
 
 !  Local constants
 
@@ -144,7 +135,7 @@ SUBROUTINE domain_initialize(self)
 !-----------------------------------------------------------------------
 !   call self%logs%info('domain_initialize()',level=1)
    if (self%A%grid_ready) then
-      call self%A%metrics()
+!      call self%A%metrics()
    else
       stop 'grid is not ready'
    end if
@@ -169,7 +160,6 @@ SUBROUTINE domain_initialize(self)
                       no_default_dimensions=.true., &
                       category='domain')
    self%domain_ready = self%A%grid_ready
-   write(*,*) self%domain_ready
    return
 END SUBROUTINE domain_initialize
 
@@ -232,9 +222,6 @@ SUBROUTINE allocate_grid_variables(self)
 !  Local variables
    integer :: stat
 !-----------------------------------------------------------------------------
-   write(*,*) 'aaaa ',self%l(1),self%u(1)
-   write(*,*) 'bbbb ',self%l(2),self%u(2)
-   write(*,*) 'cccc ',self%l(3),self%u(3)
    call mm_s('lon',self%lon,self%l(1),self%u(1),stat=stat)
    call mm_s('lat',self%lat,self%l(2),self%u(2),stat=stat)
    call mm_s('depth',self%depth,self%l(3),self%u(3),stat=stat)
@@ -247,7 +234,6 @@ END SUBROUTINE allocate_grid_variables
 
 !-----------------------------------------------------------------------------
 
-!SUBROUTINE metrics(self,logs,imin,imax,jmin,jmax,kmin,kmax)
 SUBROUTINE metrics(self)
    !! Calculate grid metrics 
 
@@ -255,11 +241,6 @@ SUBROUTINE metrics(self)
 
 !  Subroutine arguments
    class(type_geostrophic_grid), intent(inout) :: self
-!   class(type_logging), intent(in) :: logs
-!   integer, intent(in), optional :: imin,imax
-!   integer, intent(in), optional :: jmin,jmax
-!   integer, intent(in), optional :: kmin,kmax
-!      !! grid dim in case of dynamic memory allocation
 
 !  Local constants
 
@@ -267,8 +248,8 @@ SUBROUTINE metrics(self)
    real(real64) :: dlon,dlat
 !-----------------------------------------------------------------------
 !KB   call self%logs%info('metrics()',level=3)
-   dlon=1._real64
-   dlat=1._real64
+   dlon = (self%lon(self%u(1))-self%lon(self%l(1)))/(size(self%lon)-1)
+   dlat = (self%lat(self%u(2))-self%lat(self%l(2)))/(size(self%lat)-1)
    self%dx = deg2rad*dlon*rearth*cos(deg2rad*self%lat)
    self%dy = deg2rad*dlat*rearth
    self%f = 2._real64*omega*sin(deg2rad*self%lat)
