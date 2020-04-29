@@ -1,4 +1,5 @@
 project: Framework for Lake and Ocean Models (FLOM)
+page_dir: ./flom/pages
 src_dir: ../src
 src_dir: ../tests
 output_dir: ./html/flom

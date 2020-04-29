@@ -14,4 +14,3 @@ graph: true
 author: Karsten Bolding, Jorn Bruggeman and Hans Burchard
 github: https://github.com/BoldingBruggeman
 email: karsten@bolding-bruggeman.com
-
