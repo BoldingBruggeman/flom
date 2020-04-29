@@ -3,22 +3,28 @@
 MODULE grid_module
 !> Description:
 !> This module contains basic definitions for 1D, 2D and 3D grids.
-!> 
+!>
 !> The type_base_grid is extended to 1D, 2D and 3D grids by adding
 !> the rank of the grid as well as variables to hold the grid extent
 !> e.g. imin and imax. For use in models using domain decompostion
 !> a vector - halo - (of lenght equal to the rank) is provided.
 !> The extent of the grid (including halos) are stored in two arrays
 !> l and u (lower and upper).
-!> Creation of af grid can be done via several calls to the type bound 
-!> procedure configure - parsing optional parameters for each of the 
+!> Creation of af grid can be done via several calls to the type bound
+!> procedure configure - parsing optional parameters for each of the
 !> variables imin, imax, .... and halo.
-!> Check of a valid grid can be done through the boolean variable 
-!> grid_ready. If grid_ready is .false. some element have not been 
+!> Check of a valid grid can be done through the boolean variable
+!> grid_ready. If grid_ready is .false. some element have not been
 !> initialized.
 !> The type_grid provides a type bound procedure that prints the
 !> grid content to the provided Fortran unit.
-!> 
+!> [Xgcm]()
+!> [comodo](https://web.archive.org/web/20160417032300/http://pycomodo.forge.imag.fr/norm.html)
+!>  Absolute dynamic topography
+!> http://pangeo.io/use_cases/physical-oceanography/sea-surface-height.html#initialize-dataset
+!> [binder](https://mybinder.org/)
+!> [black](https://github.com/psf/black)
+!>
 !>
 !> Current Code Owner: Karsten Bolding
 !>
@@ -40,10 +46,10 @@ MODULE grid_module
       logical :: grid_ready=.false.
         !! is the grid fully configured?
       logical, private :: have_halo=.false.
-        !! is the halo different from 0 
+        !! is the halo different from 0
 !   contains
-!      procedure, PASS :: create 
-!      procedure, PASS :: print 
+!      procedure, PASS :: create
+!      procedure, PASS :: print
    END TYPE type_base_grid
 
    TYPE, extends(type_base_grid) :: type_1d_grid
@@ -185,9 +191,9 @@ SUBROUTINE print_1d_grid(self,unit)
       end if
       write(unit,*) 'l=     ',self%l
       write(unit,*) 'u=     ',self%u
-   else  
+   else
       write(unit,*) 'the grid is not fully configured yet'
-   end if  
+   end if
    return
 END SUBROUTINE print_1d_grid
 
@@ -228,7 +234,7 @@ SUBROUTINE create_2d_grid(self,imin,imax,jmin,jmax,halo)
    if (present(halo)) then
       self%have_halo = .true.
       self%halo = halo
-   end if   
+   end if
    if (self%have_imin .and. self%have_imax) then
       self%l(1) = self%imin-self%halo(1); self%u(1) = self%imax+self%halo(1)
    end if
@@ -275,9 +281,9 @@ SUBROUTINE print_2d_grid(self,unit)
    if (self%grid_ready) then
       write(unit,*) 'l=     ',self%l
       write(unit,*) 'u=     ',self%u
-   else  
+   else
       write(unit,*) 'WARNING: the grid is not fully configured yet'
-   end if  
+   end if
    return
 END SUBROUTINE print_2d_grid
 
@@ -381,9 +387,9 @@ SUBROUTINE print_3d_grid(self,unit)
    if (self%grid_ready) then
       write(unit,*) 'l=     ',self%l
       write(unit,*) 'u=     ',self%u
-   else  
+   else
       write(unit,*) 'WARNING: the grid is not fully configured yet'
-   end if  
+   end if
    return
 END SUBROUTINE print_3d_grid
 

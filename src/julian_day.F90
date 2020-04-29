@@ -2,7 +2,7 @@
 !! This module provides routines for converting back and forth between
 !! calendar dates and [Julian days](https://en.wikipedia.org/wiki/Julian_day).
 !! Relies on the datetime module for all calculations.
-!! 
+!!
 !-----------------------------------------------------------------------------
 
 MODULE julian_days
@@ -43,7 +43,7 @@ MODULE julian_days
 !-----------------------------------------------------------------------------
 
 CONTAINS
-  
+
 !-----------------------------------------------------------------------------
 
 SUBROUTINE init_epoch()
@@ -149,7 +149,7 @@ ELEMENTAL SUBROUTINE calendar_date_date(julian,yyyy,mm,dd)
    dd=t%getDay()
    return
 END SUBROUTINE calendar_date_date
-  
+
 !-----------------------------------------------------------------------------
 
 END MODULE julian_days

@@ -5,7 +5,7 @@
 MODULE geostrophic_domain
 
 !> Sets up the calculation domain for the geostrophic model.
-!> All domain and grid related quantities are set and calculated in 
+!> All domain and grid related quantities are set and calculated in
 !> this module like - dimensions, coordinates, metrics and related
 !> meta-data.
 !> For now the Arakawa A-grid is used.
@@ -49,7 +49,7 @@ MODULE geostrophic_domain
         !! Grid spacing
       real(real64), dimension(:), allocatable :: dy
         !! Grid spacing
-#if 0        
+#if 0
       real(real64), dimension(:,:), allocatable :: H
         !! undisturbed water depth
       real(real64), dimension(:,:), allocatable :: D
@@ -57,7 +57,7 @@ MODULE geostrophic_domain
       real(real64), dimension(:,:,:), allocatable :: ho, hn
         !! layer heights - old and new time step
       real(real64), dimension(:,:,:), allocatable :: zf, zc
-#endif      
+#endif
       integer, dimension(:,:,:), allocatable :: mask
         !! mask=1 -> water
 
@@ -95,7 +95,7 @@ CONTAINS
 !-----------------------------------------------------------------------------
 
 SUBROUTINE domain_configure(self,logs,fm,imin,imax,jmin,jmax,kmin,kmax)
-   !! Configure the domain 
+   !! Configure the domain
 
    IMPLICIT NONE
 
@@ -122,7 +122,7 @@ END SUBROUTINE domain_configure
 !-----------------------------------------------------------------------------
 
 SUBROUTINE domain_initialize(self)
-   !! Configure the domain 
+   !! Configure the domain
 
    IMPLICIT NONE
 
@@ -132,6 +132,7 @@ SUBROUTINE domain_initialize(self)
 !  Local constants
 
 !  Local variables
+   type (type_field), pointer :: f
 !-----------------------------------------------------------------------
 !   call self%logs%info('domain_initialize()',level=1)
    if (self%A%grid_ready) then
@@ -143,17 +144,20 @@ SUBROUTINE domain_initialize(self)
                       standard_name='longitude', &
                       dimensions=(/id_dim_lon/), &
                       no_default_dimensions=.true., &
-                      category='domain')
+                      category='domain',field=f)
+   call f%attributes%set('axis', 'X')
    call self%fm%register('lat', 'degrees_north', 'latitude', &
                       standard_name='latitude', &
                       dimensions=(/id_dim_lat/), &
                       no_default_dimensions=.true., &
-                      category='domain')
+                      category='domain',field=f)
+   call f%attributes%set('axis', 'Y')
    call self%fm%register('depth', 'm', 'depth', &
                       standard_name='depth', &
                       dimensions=(/id_dim_z/), &
                       no_default_dimensions=.true., &
-                      category='domain')
+                      category='domain',field=f)
+   call f%attributes%set('axis', 'Z')
    call self%fm%register('f', 's-1', 'Coriolis', &
                       standard_name='Coriolis', &
                       dimensions=(/id_dim_lat/), &
@@ -235,7 +239,7 @@ END SUBROUTINE allocate_grid_variables
 !-----------------------------------------------------------------------------
 
 SUBROUTINE metrics(self)
-   !! Calculate grid metrics 
+   !! Calculate grid metrics
 
    IMPLICIT NONE
 
@@ -259,7 +263,7 @@ END SUBROUTINE metrics
 !-----------------------------------------------------------------------------
 
 SUBROUTINE grid_configure(self,logs,imin,imax,jmin,jmax,kmin,kmax,halo)
-   !! Configure the type_grid 
+   !! Configure the type_grid
 
    IMPLICIT NONE
 

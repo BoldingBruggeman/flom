@@ -1,7 +1,7 @@
 ! Copyright (C) 2020 Bolding & Bruggeman
 !> This module provides a generic interface to reading 1D, 2D, 3D arrays
 !> of integer, real32 and real64 types.
-!> The data format is assumed to be 
+!> The data format is assumed to be
 !> [NetCDF Fortran90](https://www.unidata.ucar.edu/software/netcdf/docs-fortran/index.html)
 !> The module uses the Fortran datetime module for all time manipulations
 !> and make conversions between NetCDF units and time variable with datetime
@@ -77,7 +77,7 @@ MODULE input_module
       !! the index in the dimension array that holds the time dimension
       integer :: ndims
         !! number of dimensions
-      integer, private :: time_dim_id, unlimdimid 
+      integer, private :: time_dim_id, unlimdimid
         !! time_dim_id and unlimited id any - else -1
       integer, dimension(:), allocatable :: dimids, dimlens
         !! list of dimension ids and lengths
@@ -96,7 +96,7 @@ MODULE input_module
       type(datetime), dimension(:), allocatable :: datetimes
         !! time variable if present
       integer :: cur=-1
-      integer, private :: myreader 
+      integer, private :: myreader
         !! used in selct case to get the right NetCDF reader
       integer(int32), pointer :: pscalarint32 => null()
       integer(int32), dimension(:), pointer :: p1dint32 => null()
@@ -157,13 +157,13 @@ SUBROUTINE configure_netcdf_input(self,start,count)
       self%extern_start =.true.
       allocate(self%start(size(start)))
       self%start=start
-   end if   
+   end if
    self%extern_count =.false.
    if (present(count)) then
       self%extern_count =.true.
       allocate(self%count(size(count)))
       self%count=count
-   end if   
+   end if
    return
 END SUBROUTINE configure_netcdf_input
 
@@ -188,14 +188,14 @@ SUBROUTINE initialize_netcdf_input(self)
      !! reference time for num2date Fortran routine
    type(timedelta) :: t,dt
 !-----------------------------------------------------------------------------
-!   self%time_dependent = .false. 
-    self%strp_format = '%Y-%m-%d %H:%M:%S' 
+!   self%time_dependent = .false.
+    self%strp_format = '%Y-%m-%d %H:%M:%S'
 
    ! open the NetCDF file with the bathymetry
    call check( nf90_open(trim(self%f), NF90_NOWRITE, self%ncid) )
 
    ! check existence of the variable in the file
-   call check(nf90_inq_varid(self%ncid, trim(self%v), self%varid))
+   call check(nf90_inq_varid(self%ncid, trim(self%v), self%varid), error_handler=rc)
 
    rc = nf90_inquire(self%ncid, unlimiteddimid=self%unlimdimid)
 
@@ -210,18 +210,18 @@ SUBROUTINE initialize_netcdf_input(self)
    if (self%extern_start) then
       if (size(self%start) /= self%ndims) then
               ! some error handling
-      end if   
-   else        
+      end if
+   else
       allocate(self%start(self%ndims))
       self%start=1
-   end if   
+   end if
    if (self%extern_count) then
       if (size(self%count) /= self%ndims) then
               ! some error handling
-      end if   
-   else        
+      end if
+   else
       allocate(self%count(self%ndims))
-   end if        
+   end if
    do n=1,self%ndims
       call check(nf90_inquire_dimension(self%ncid, self%dimids(n), name=self%cord_names(n), len=self%dimlens(n)))
       if (.not. self%extern_count) self%count(n)=self%dimlens(n)
@@ -239,7 +239,7 @@ SUBROUTINE initialize_netcdf_input(self)
    end if
 
    rc =  nf90_inq_varid(self%ncid,'time',self%time_var_id)
-   if(rc == nf90_noerr) then 
+   if(rc == nf90_noerr) then
       call check(nf90_get_att(self%ncid,self%time_var_id,"units",self%timeunit))
       allocate(self%times(self%timelen))
       allocate(self%datetimes(self%timelen))
@@ -286,9 +286,9 @@ SUBROUTINE print_info_netcdf_input(self)
       write(*,*) '   time_var_id= ',self%time_var_id
       write(*,*) '   timelen=     ',self%timelen
       write(*,*) '   timeunit=    ',trim(self%timeunit)
-      write(*,*) '   epoch=       ',self%epoch%isoformat() 
-      write(*,*) '   first=       ',self%first_time%isoformat() 
-      write(*,*) '   last=        ',self%last_time%isoformat() 
+      write(*,*) '   epoch=       ',self%epoch%isoformat()
+      write(*,*) '   first=       ',self%first_time%isoformat()
+      write(*,*) '   last=        ',self%last_time%isoformat()
       if (self%timelen .lt. 4) then
          write(*,*) '   time(s)= '
          do n=1,self%timelen
@@ -385,8 +385,8 @@ SUBROUTINE get_netcdf_input(self,error_handler)
       end if
            write(*,*) self%p1dreal64
            stop
-#endif           
-   end if 
+#endif
+   end if
    if (associated(self%p2dreal64)) then
       call check(nf90_get_var(self%ncid, self%varid, self%p2dreal64, &
                               start=self%start(1:self%ndims), &
@@ -403,8 +403,8 @@ SUBROUTINE get_netcdf_input(self,error_handler)
          self%p2dreal64 = self%scale_factor_real64*self%p2dreal64 &
                          +self%add_offset_real64
       end if
-#endif           
-   end if 
+#endif
+   end if
    if (associated(self%p3dreal64)) then
       call check(nf90_get_var(self%ncid, self%varid, self%p3dreal64, &
                               start=self%start(1:self%ndims), &
@@ -419,8 +419,8 @@ SUBROUTINE get_netcdf_input(self,error_handler)
          self%p3dreal64 = self%scale_factor_real64*self%p3dreal64 &
                          +self%add_offset_real64
       end if
-#endif           
-   end if 
+#endif
+   end if
    return
 END SUBROUTINE get_netcdf_input
 
@@ -449,7 +449,7 @@ SUBROUTINE get_next(self,stat)
    if (self%cur .gt. self%timelen) then
       stat=1
       return
-   end if   
+   end if
    self%start(self%time_index)=self%cur
    self%count(self%time_index)=1
    call self%get()
@@ -484,14 +484,14 @@ subroutine  check(status,error_handler)
 
    if (present(error_handler)) then
       error_handler = 1
-   else 
-      if(status /= nf90_noerr) then 
+   else
+      if(status /= nf90_noerr) then
         print *, trim(nf90_strerror(status))
         stop "Stopped"
       end if
    end if
    return
-end subroutine check 
+end subroutine check
 
 !-----------------------------------------------------------------------------
 
@@ -501,7 +501,7 @@ END MODULE input_module
    TYPE, extends(type_input_data) :: type_netcdf_2d_real64
      !! netcdf_2d_real64 extends type_netcdf_input
       integer :: dimids(2)
-      integer :: dimlens(2) 
+      integer :: dimlens(2)
       real(real64), dimension(:,:), pointer :: data
    contains
       procedure, :: get => get_netcdf_2d_real64

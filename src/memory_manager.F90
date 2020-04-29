@@ -1,14 +1,14 @@
 ! Copyright (C) 2020 Bolding & Bruggeman
 !> The memory manager uses a 'poor mans template' method to allow for
-!> easy allocation of memory for 1D, 2D, 3D arrays of integer(default), 
+!> easy allocation of memory for 1D, 2D, 3D arrays of integer(default),
 !> real(real32) and real(real64). A total of 27 subroutines are provided
-!> through one common interface - mm_s - through overloading. 
+!> through one common interface - mm_s - through overloading.
 !> Allocation can be done by specifying the extent of the cordinates
-!> through vectors with the length of the rank (scalars for 1D arrays) 
+!> through vectors with the length of the rank (scalars for 1D arrays)
 !> - l and u - for lower and upper.
 !> In addition to allocating arrays an overloaded subroutine mm_print
 !> allows for printing information about any of the allocated array types.
-!> The 27 allocation routines + 9 print routines are generated via 
+!> The 27 allocation routines + 9 print routines are generated via
 !> pre-processing of the file memory_manager.F90.template.
 !> Extending to higher ranks - or other data types is easily done.
 !> The varaible - stat - is used to indicated errors.
