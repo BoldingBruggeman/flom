@@ -1,5 +1,5 @@
 title: Example - geostrophic
-Author: Karsten Bolding
+Author: Karsten Bolding, Hans Burchard and Knut Klingbeil
 
 The geostrophic currents has been implemented using the FLOM framework as
 a proof of concept. The geostrophic currents is not a dynamic model but
