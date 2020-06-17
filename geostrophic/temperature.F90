@@ -26,7 +26,7 @@ MODULE geostrophic_temperature
       class(type_logging), pointer :: logs
       class(type_field_manager), pointer :: fm
       class(type_geostrophic_domain), pointer :: domain
-      real(real64), dimension(:,:,:), allocatable :: T
+      real(real64), dimension(:,:,:), allocatable :: t,pt,ct
       character(len=256) :: f = "temperature.nc"
 
       contains
@@ -43,7 +43,7 @@ CONTAINS
 
 SUBROUTINE temperature_configuration(self,logs,fm)
 
-   !! Configure the the temperature module 
+   !! Configure the the temperature module
 
    IMPLICIT NONE
 
@@ -83,13 +83,20 @@ SUBROUTINE temperature_initialize(self,domain)
 !---------------------------------------------------------------------------
    call self%logs%info('temperature_initialize()',level=2)
    self%domain => domain
-   call mm_s('T',self%T,self%domain%A%l,self%domain%A%u,def=15._real64,stat=stat)
-   call self%fm%register('temp', 'Celsius', 'potential temperature', &
+   call mm_s('T',self%t,self%domain%A%l,self%domain%A%u,def=15._real64,stat=stat)
+   call self%fm%register('t', 'Celsius', 'in-situ temperature', &
+                         standard_name='sea_water_insitu_temperature', &
+                         dimensions=(/id_dim_z/), &
+                         category='temperature_and_salinity', &
+                         part_of_state=.true.)
+   call self%fm%send_data('t', self%t)
+   call mm_s('T',self%ct,self%t,stat=stat)
+   call self%fm%register('ct', 'Celsius', 'conservative temperature', &
                          standard_name='sea_water_conservative_temperature', &
                          dimensions=(/id_dim_z/), &
                          category='temperature_and_salinity', &
                          part_of_state=.true.)
-   call self%fm%send_data('temp', self%T)
+   call self%fm%send_data('ct', self%t)
 !KB   call mm_print('temp',self%T)
    return
 END SUBROUTINE temperature_initialize
@@ -114,7 +121,7 @@ END SUBROUTINE temperature_update
 !---------------------------------------------------------------------------
 
 SUBROUTINE temperature_finalize(self)
-   !! Clean up the temperature module 
+   !! Clean up the temperature module
 
    IMPLICIT NONE
 

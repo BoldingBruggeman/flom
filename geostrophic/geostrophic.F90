@@ -17,6 +17,8 @@ MODULE geostrophic_model
    use geostrophic_physics
    use geostrophic_dynamics
 
+   use gsw_mod_toolbox
+
    IMPLICIT NONE
 
    PRIVATE  ! Private scope by default
@@ -62,7 +64,7 @@ SUBROUTINE geostrophic_settings(self)
    class(type_geostrophic_model) :: self
 
 !  Local constants
-   character(len=256), parameter :: time_format='%Y-%m-%d %H:%M:%S' 
+   character(len=256), parameter :: time_format='%Y-%m-%d %H:%M:%S'
 
 !  Local variables
    integer :: stat
@@ -95,7 +97,7 @@ SUBROUTINE geostrophic_settings(self)
       self%input%resolution(1:1) = 'm'
       self%input%a = '01'
       call self%logs%info('resolution: ',msg2='m(edium)',level=2)
-   end if   
+   end if
    return
 END SUBROUTINE geostrophic_settings
 
@@ -135,14 +137,14 @@ SUBROUTINE geostrophic_configure(self)
    imin=1; imax=self%count(1)
    jmin=1; jmax=self%count(2)
    kmin=1; kmax=self%count(3)
-#else   
+#else
    if (command_argument_count() .ne. 6) then
       write(*,*) 'ERROR, must be called like:'
       STOP ' ./geostrophic lon0 lat0<start> <stop> - timeformat "yyyy-mm-dd hh:mi:ss"'
    end if
-#endif   
+#endif
 
-   call self%input%configure(self%logs,start=self%start,count=self%count) 
+   call self%input%configure(self%logs,start=self%start,count=self%count)
 
    call self%domain%configure(self%logs,self%fm, &
                               imin=imin,imax=imax, &
@@ -180,7 +182,7 @@ SUBROUTINE geostrophic_initialize(self)
    call self%domain%initialize()
    call self%physics%initialize(self%logs,self%domain)
    call self%dynamics%initialize(self%logs,self%domain)
-   call self%input%initialize(self%domain,self%physics%salinity%S,self%physics%temperature%T)
+   call self%input%initialize(self%domain,self%physics%salinity%sp,self%physics%temperature%T)
    call self%domain%A%metrics()
    call self%fm%send_data('lon', self%domain%A%lon)
    call self%fm%send_data('lat', self%domain%A%lat)
@@ -208,17 +210,27 @@ SUBROUTINE geostrophic_integrate(self)
 ! Local variables
   integer :: n
   type(datetime) :: sim_time
+  real(real64) :: kaj=0._real64
 !-----------------------------------------------------------------------------
    call self%logs%info('geostrophic_integrate()')
    do n=1,12
       sim_time = datetime(2000, n, 15)
       call self%logs%info(sim_time % strftime('%Y-%m-%d'),level=2)
       call self%input%update(n)
-      call self%physics%temperature%update()
-      where(self%physics%temperature%T .lt. 100._real64 .and. self%physics%salinity%S .lt. 100._real64) self%domain%A%mask=1
+      where(self%physics%temperature%t .lt. 100._real64 .and. self%physics%salinity%sp .lt. 100._real64)
+         self%domain%A%mask=1
+!KB         self%physics%salinity%sa = gsw_sa_from_sp(self%physics%salinity%sp,kaj,self%domain%A%lon,self%domain%A%lat)
+         self%physics%salinity%sa = self%physics%salinity%sp
+         self%physics%temperature%ct = gsw_ct_from_t(self%physics%salinity%sa,self%physics%temperature%t,kaj)
+      else where
+         self%physics%salinity%sa = -9999._real64
+      end where
+!KBwrite(*,*) self%domain%A%lon
+!KBstop
       call self%physics%salinity%update()
-      call self%physics%density%calculate(self%physics%salinity%S, &
-                                          self%physics%temperature%T )
+      call self%physics%temperature%update()
+      call self%physics%density%calculate(self%physics%salinity%sa, &
+                                          self%physics%temperature%ct )
       call self%physics%density%buoyancy()
       call self%dynamics%pressure%internal(self%physics%density%buoy)
       call self%dynamics%currents%update(self%physics%density%rho, &

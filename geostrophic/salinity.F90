@@ -28,7 +28,7 @@ MODULE geostrophic_salinity
       class(type_geostrophic_domain), pointer :: domain
       character(len=256) :: f = "salinity.nc"
 
-      real(real64), dimension(:,:,:), allocatable :: S
+      real(real64), dimension(:,:,:), allocatable :: sp, sa
 
       contains
 
@@ -83,13 +83,21 @@ SUBROUTINE salinity_initialize(self,domain)
 !---------------------------------------------------------------------------
    call self%logs%info('salinity_initialize()',level=2)
    self%domain => domain
-   call mm_s('S',self%S,self%domain%A%l,self%domain%A%u,def=35._real64,stat=stat)
-   call self%fm%register('salt', 'kg/kg', 'absolute salinity', &
+   call mm_s('S',self%sp,self%domain%A%l,self%domain%A%u,def=35._real64,stat=stat)
+   call self%fm%register('sp', 'PSU', 'practical salinity', &
+                          standard_name='sea_waterpractical_salinity', &
+                          dimensions=(/id_dim_z/), &
+                          category='temperature_and_salinity', &
+                          fill_value=-9999._real64)
+   call self%fm%send_data('sp', self%sp)
+   call mm_s('S',self%sa,self%sp,stat=stat)
+   call self%fm%register('sa', 'g/kg', 'absolute salinity', &
                           standard_name='sea_water_absolute_salinity', &
                           dimensions=(/id_dim_z/), &
                           category='temperature_and_salinity', &
+                          fill_value=-9999._real64, &
                           part_of_state=.true.)
-   call self%fm%send_data('salt', self%S)
+   call self%fm%send_data('sa', self%sa)
    return
 END SUBROUTINE salinity_initialize
 
@@ -125,7 +133,8 @@ SUBROUTINE salinity_finalize(self)
 !  Local variables
 !---------------------------------------------------------------------------
 !   call self%logs%info('salinity_finalize()',level=2)
-   if(allocated(self%S)) deallocate(self%S)
+   if(allocated(self%sp)) deallocate(self%sp)
+   if(allocated(self%sa)) deallocate(self%sa)
    return
 END SUBROUTINE salinity_finalize
 
