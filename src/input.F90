@@ -65,7 +65,7 @@ MODULE input_module
       !! author: Karsten Bolding
       !! version: v0.1
 
-      character(len=256) :: v
+      character(len=32) :: v
         !! NetCDF variable name
       integer, private :: ncid
         !! NetCDF id
@@ -81,14 +81,16 @@ MODULE input_module
         !! time_dim_id and unlimited id any - else -1
       integer, dimension(:), allocatable :: dimids, dimlens
         !! list of dimension ids and lengths
-      character(len=64), dimension(:), allocatable :: cord_names
+      character(len=32), dimension(:), allocatable :: cord_names
         !! list of dimension ids and lengths
+      character(len=:), allocatable :: units
+        !! variable units - used to check coodinates
       integer, private, dimension(:), allocatable :: start, count
         !! arguments to the NetCDF get routine
       logical, private :: extern_start=.false., extern_count=.false.
         !! are start and count provided externally
       integer :: timedim, timelen
-      character(len=256) :: timeunit
+      character(len=:), allocatable :: timeunit
       real(real64), dimension(:), allocatable :: times
         !! time variable if present
         !! https://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
@@ -187,6 +189,7 @@ SUBROUTINE initialize_netcdf_input(self)
    character(len=*), parameter :: kurt="0001-01-01 00:00:00"
      !! reference time for num2date Fortran routine
    type(timedelta) :: t,dt
+   character(len=256) :: buf
 !-----------------------------------------------------------------------------
 !   self%time_dependent = .false.
     self%strp_format = '%Y-%m-%d %H:%M:%S'
@@ -227,6 +230,13 @@ SUBROUTINE initialize_netcdf_input(self)
       if (.not. self%extern_count) self%count(n)=self%dimlens(n)
    end do
 
+   rc = nf90_get_att(self%ncid,self%varid,'units',buf)
+   if(rc == nf90_noerr) then
+      self%units = trim(buf)
+      write(*,*) trim(self%units),len(self%units)
+      stop
+   end if
+
    ! check if variable has time dimension - assume name of time variable is 'time'
    rc =  nf90_inq_dimid(self%ncid,'time',self%time_dim_id)
    if (rc == nf90_noerr) then
@@ -240,7 +250,8 @@ SUBROUTINE initialize_netcdf_input(self)
 
    rc =  nf90_inq_varid(self%ncid,'time',self%time_var_id)
    if(rc == nf90_noerr) then
-      call check(nf90_get_att(self%ncid,self%time_var_id,"units",self%timeunit))
+      call check(nf90_get_att(self%ncid,self%time_var_id,"units",buf))
+      self%timeunit = trim(buf)
       allocate(self%times(self%timelen))
       allocate(self%datetimes(self%timelen))
       call check(nf90_get_var(self%ncid, self%time_var_id, self%times))
