@@ -9,7 +9,7 @@ addons:
    apt:
       packages:
 #         - netcdf-bin libnetcdf-dev openmpi-bin libopenmpi-dev gfortran
-#KB         - gfortran netcdf-bin libnetcdf-dev libnetcdff-dev
+         - gfortran netcdf-bin libnetcdf-dev libnetcdff-dev
 
 python:
   - '3.6'
@@ -24,14 +24,12 @@ before_install:
 #KB  - git submodule update --init --recursive
 
 script:
-  - pwd
   - cd extern
-  - ls
   - tar -xzf datetime-fortran.tar.gz
   - cd ..
-#KB  - mkdir build && cd build
-#KB  - cmake ../ -DCMAKE_Fortran_COMPILER=gfortran
-#KB  - make
+  - mkdir build && cd build
+  - cmake ../ -DCMAKE_Fortran_COMPILER=gfortran
+  - make
 
 branches:
   only:
