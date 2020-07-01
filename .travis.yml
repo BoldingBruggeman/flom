@@ -25,7 +25,10 @@ before_install:
 
 script:
   - pwd
+  - cd extern
   - ls
+  - tar -xzf datetime-fortran.tar.gz
+  - cd ..
 #KB  - mkdir build && cd build
 #KB  - cmake ../ -DCMAKE_Fortran_COMPILER=gfortran
 #KB  - make
