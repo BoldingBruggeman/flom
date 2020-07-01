@@ -9,24 +9,26 @@ addons:
    apt:
       packages:
 #         - netcdf-bin libnetcdf-dev openmpi-bin libopenmpi-dev gfortran
-         - gfortran netcdf-bin libnetcdf-dev libnetcdff-dev
+#KB         - gfortran netcdf-bin libnetcdf-dev libnetcdff-dev
 
 python:
   - '3.6'
 
 # Handle git submodules yourself
-git:
-    submodules: false
+#KBgit:
+#KB    submodules: false
 
 before_install:
    # Use sed to replace the SSH URL with the public URL, then initialize submodules
-  - sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
-  - git submodule update --init --recursive
+#KB  - sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
+#KB  - git submodule update --init --recursive
 
 script:
-  - mkdir build && cd build
-  - cmake ../ -DCMAKE_Fortran_COMPILER=gfortran
-  - make
+  - pwd
+  - ls
+#KB  - mkdir build && cd build
+#KB  - cmake ../ -DCMAKE_Fortran_COMPILER=gfortran
+#KB  - make
 
 branches:
   only:
