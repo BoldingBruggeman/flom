@@ -4,3 +4,6 @@
 [submodule "extern/flexout"]
 	path = extern/flexout
 	url = ../flexout
+[submodule "extern/datetime-fortran"]
+	path = extern/datetime-fortran
+	url = https://github.com/wavebitscientific/datetime-fortran.git
