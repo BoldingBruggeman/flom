@@ -5,10 +5,11 @@
 !> @endnote
 
 PROGRAM test_read_netcdf
-   !! Testing calculation of time varying depths at S, U and V points
+   !! Testing the input module by reading NetCDF formatted files
 
    USE, INTRINSIC :: ISO_FORTRAN_ENV
    use input_module
+   use datetime_module
    IMPLICIT NONE
 
 !  Local constants
@@ -21,6 +22,7 @@ PROGRAM test_read_netcdf
    real(real64), dimension(:,:,:), allocatable, target :: var3d
    integer :: i,j,k,l,m,n
    integer :: idx(3)
+   type(datetime) :: t
 !-----------------------------------------------------------------------
 
    if (command_argument_count() .ne. 2 ) then
@@ -44,8 +46,11 @@ PROGRAM test_read_netcdf
          end do
          i=input%dimlens(idx(1))
          allocate(var1d(i))
-         input%p1dreal64 => var1d
+         call input%link_data(var1d)
+!KB         input%p1dreal64 => var1d
       case (2)
+real64_2d: block
+!         real(real64), dimension(:,:), allocatable, target :: var2d
          do l=1,input%ndims
             if (l /= input%time_index) then
               idx(m) = l
@@ -55,7 +60,9 @@ PROGRAM test_read_netcdf
          i=input%dimlens(idx(1))
          j=input%dimlens(idx(2))
          allocate(var2d(i,j))
-         input%p2dreal64 => var2d
+         call input%link_data(var2d)
+!KB         input%p2dreal64 => var2d
+end block real64_2d
       case (3)
          do l=1,input%ndims
             if (l /= input%time_index) then
@@ -67,12 +74,17 @@ PROGRAM test_read_netcdf
          j=input%dimlens(idx(2))
          k=input%dimlens(idx(3))
          allocate(var3d(i,j,k))
-         input%p3dreal64 => var3d
+         call input%link_data(var3d)
+!KB         input%p3dreal64 => var3d
    end select
-!   do n=1,input%dimlens(input%time_index)
-   do n=1,24
-      call input%next(stat)
-      write(*,*) n,var2d(10,90)
+   t = input%datetimes(8)
+   call input%attime(t,stat)
+   write(*,*) n,t%isoformat(),var2d(10,90)
+   do n=1,input%timelen
+      t = input%datetimes(n)
+      call input%attime(t,stat)
+!      call input%prev(stat)
+      write(*,*) n,t%isoformat(),var2d(10,90)
    end do
    call input%close()
 

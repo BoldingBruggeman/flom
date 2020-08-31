@@ -53,7 +53,41 @@ MODULE input_module
       character(len=:), allocatable :: strp_format
         !! time format of data
 
+      integer(int32), pointer :: pscalarint32 => null()
+      integer(int32), dimension(:), pointer :: p1dint32 => null()
+      integer(int32), dimension(:,:), pointer :: p2dint32 => null()
+      integer(int32), dimension(:,:,:), pointer :: p3dint32 => null()
+      integer(int32), dimension(:,:,:,:), pointer :: p4dint32 => null()
+
+      real(real32), pointer :: pscalarreal32 => null()
+      real(real32), dimension(:), pointer :: p1dreal32 => null()
+      real(real32), dimension(:,:), pointer :: p2dreal32 => null()
+      real(real32), dimension(:,:,:), pointer :: p3dreal32 => null()
+      real(real32), dimension(:,:,:,:), pointer :: p4dreal32 => null()
+
+      real(real64), pointer :: pscalarreal64 => null()
+      real(real64), dimension(:), pointer :: p1dreal64 => null()
+      real(real64), dimension(:,:), pointer :: p2dreal64 => null()
+      real(real64), dimension(:,:,:), pointer :: p3dreal64 => null()
+      real(real64), dimension(:,:,:,:), pointer :: p4dreal64 => null()
+
       contains
+
+      procedure :: link_data_1d_int32
+      procedure :: link_data_2d_int32
+      procedure :: link_data_3d_int32
+      procedure :: link_data_4d_int32
+!KB      procedure :: link_data_1d_real32
+!KB      procedure :: link_data_2d_real32
+!KB      procedure :: link_data_3d_real32
+!KB      procedure :: link_data_4d_real32
+      procedure :: link_data_1d_real64
+      procedure :: link_data_2d_real64
+      procedure :: link_data_3d_real64
+      procedure :: link_data_4d_real64
+      generic ::  link_data => link_data_1d_int32, link_data_2d_int32, link_data_3d_int32, link_data_4d_int32, &
+!KB                               link_data_1d_real32, link_data_2d_real32, link_data_3d_real32, link_data_4d_real32, &
+                               link_data_1d_real64, link_data_2d_real64, link_data_3d_real64, link_data_4d_real64
 
 !      procedure :: initialize => initialize_data
 !      procedure :: get => get_data
@@ -75,6 +109,8 @@ MODULE input_module
       !! time variable id associated with variable id
       integer, public :: time_index
       !! the index in the dimension array that holds the time dimension
+      integer :: xtype
+        !! NetCDF variable data type
       integer :: ndims
         !! number of dimensions
       integer, private :: time_dim_id, unlimdimid
@@ -98,27 +134,9 @@ MODULE input_module
       type(datetime), dimension(:), allocatable :: datetimes
         !! time variable if present
       integer :: cur=-1
-      integer, private :: myreader
+!KB      integer, private :: myreader
         !! used in selct case to get the right NetCDF reader
-      integer(int32), pointer :: pscalarint32 => null()
-      integer(int32), dimension(:), pointer :: p1dint32 => null()
-      integer(int32), dimension(:,:), pointer :: p2dint32 => null()
-      integer(int32), dimension(:,:,:), pointer :: p3dint32 => null()
-      integer(int32), dimension(:,:,:,:), pointer :: p4dint32 => null()
 
-      real(real32), pointer :: pscalarreal32 => null()
-      real(real32), dimension(:), pointer :: p1dreal32 => null()
-      real(real32), dimension(:,:), pointer :: p2dreal32 => null()
-      real(real32), dimension(:,:,:), pointer :: p3dreal32 => null()
-      real(real32), dimension(:,:,:,:), pointer :: p4dreal32 => null()
-
-      real(real64), pointer :: pscalarreal64 => null()
-      real(real64), dimension(:), pointer :: p1dreal64 => null()
-      real(real64), dimension(:,:), pointer :: p2dreal64 => null()
-      real(real64), dimension(:,:,:), pointer :: p3dreal64 => null()
-      real(real64), dimension(:,:,:,:), pointer :: p4dreal64 => null()
-
-      real(int32) :: scale_factor_int32=1._int32, add_offset_int32=0._int32
       real(real32) :: scale_factor_real32=1._real32, add_offset_real32=0._real32
       real(real64) :: scale_factor_real64=1._real64, add_offset_real64=0._real64
 
@@ -130,7 +148,9 @@ MODULE input_module
 !      procedure, deferred :: get => get_netcdf_input
 !      procedure :: getsize => get_netcdf_variable_size
       procedure :: get => get_netcdf_input
+      procedure :: prev => get_prev
       procedure :: next => get_next
+      procedure :: attime => get_attime
       procedure :: close => close_netcdf_input
 
    end type type_netcdf_input
@@ -138,6 +158,8 @@ MODULE input_module
 !-----------------------------------------------------------------------------
 
 CONTAINS
+
+!-----------------------------------------------------------------------------
 
 SUBROUTINE configure_netcdf_input(self,start,count)
    !! Open a NetCDF file and get a variable id
@@ -190,11 +212,12 @@ SUBROUTINE initialize_netcdf_input(self)
      !! reference time for num2date Fortran routine
    type(timedelta) :: t,dt
    character(len=256) :: buf
+   integer :: xtype
 !-----------------------------------------------------------------------------
 !   self%time_dependent = .false.
     self%strp_format = '%Y-%m-%d %H:%M:%S'
 
-   ! open the NetCDF file with the bathymetry
+   ! open the NetCDF file
    call check( nf90_open(trim(self%f), NF90_NOWRITE, self%ncid) )
 
    ! check existence of the variable in the file
@@ -205,7 +228,27 @@ SUBROUTINE initialize_netcdf_input(self)
    ! get dimension ids for the obtained variable id
    call check( nf90_inquire_variable(self%ncid, self%varid, ndims=self%ndims) )
    allocate(self%dimids(self%ndims))
-   call check(nf90_inquire_variable(self%ncid, self%varid, dimids=self%dimids(:)))
+   call check(nf90_inquire_variable(self%ncid, self%varid, xtype=self%xtype, dimids=self%dimids(:)))
+
+   rc = nf90_inquire_attribute(self%ncid, self%varid, "scale_factor", xtype=xtype)
+   if(rc == nf90_noerr) then
+      select case (xtype)
+         case (NF90_FLOAT)
+            rc = nf90_get_att(self%ncid, self%varid, "scale_factor", self%scale_factor_real32)
+         case (NF90_DOUBLE)
+            rc = nf90_get_att(self%ncid, self%varid, "scale_factor", self%scale_factor_real64)
+      end select
+   end if
+
+   rc = nf90_inquire_attribute(self%ncid, self%varid, "add_offset", xtype=xtype)
+   if(rc == nf90_noerr) then
+      select case (xtype)
+         case (NF90_FLOAT)
+            rc = nf90_get_att(self%ncid, self%varid, "add_offset", self%add_offset_real64)
+         case (NF90_DOUBLE)
+            rc = nf90_get_att(self%ncid, self%varid, "add_offset", self%add_offset_real64)
+      end select
+   end if
 
    ! get dimension lengths for variable varid
    allocate(self%dimlens(self%ndims))
@@ -234,7 +277,7 @@ SUBROUTINE initialize_netcdf_input(self)
    if(rc == nf90_noerr) then
       self%units = trim(buf)
       write(*,*) trim(self%units),len(self%units)
-      stop
+!KB      stop
    end if
 
    ! check if variable has time dimension - assume name of time variable is 'time'
@@ -268,6 +311,72 @@ END SUBROUTINE initialize_netcdf_input
 
 !-----------------------------------------------------------------------------
 
+SUBROUTINE link_data_1d_int32(self,a)
+   class(type_input_data), intent(inout) :: self
+   integer, dimension(:), target :: a
+   integer :: stat
+   self%p1dint32 => a
+   return
+END SUBROUTINE link_data_1d_int32
+
+SUBROUTINE link_data_2d_int32(self,a)
+   class(type_input_data), intent(inout) :: self
+   integer, dimension(:,:), target :: a
+   integer :: stat
+   self%p2dint32 => a
+   return
+END SUBROUTINE link_data_2d_int32
+
+SUBROUTINE link_data_3d_int32(self,a)
+   class(type_input_data), intent(inout) :: self
+   integer, dimension(:,:,:), target :: a
+   integer :: stat
+   self%p3dint32 => a
+   return
+END SUBROUTINE link_data_3d_int32
+
+SUBROUTINE link_data_4d_int32(self,a)
+   class(type_input_data), intent(inout) :: self
+   integer, dimension(:,:,:,:), target :: a
+   integer :: stat
+   self%p4dint32 => a
+   return
+END SUBROUTINE link_data_4d_int32
+
+SUBROUTINE link_data_1d_real64(self,a)
+   class(type_input_data), intent(inout) :: self
+   real(real64), dimension(:), target :: a
+   integer :: stat
+   self%p1dreal64 => a
+   return
+END SUBROUTINE link_data_1d_real64
+
+SUBROUTINE link_data_2d_real64(self,a)
+   class(type_input_data), intent(inout) :: self
+   real(real64), dimension(:,:), target :: a
+   integer :: stat
+   self%p2dreal64 => a
+   return
+END SUBROUTINE link_data_2d_real64
+
+SUBROUTINE link_data_3d_real64(self,a)
+   class(type_input_data), intent(inout) :: self
+   real(real64), dimension(:,:,:), target :: a
+   integer :: stat
+   self%p3dreal64 => a
+   return
+END SUBROUTINE link_data_3d_real64
+
+SUBROUTINE link_data_4d_real64(self,a)
+   class(type_input_data), intent(inout) :: self
+   real(real64), dimension(:,:,:,:), target :: a
+   integer :: stat
+   self%p4dreal64 => a
+   return
+END SUBROUTINE link_data_4d_real64
+
+!-----------------------------------------------------------------------------
+
 SUBROUTINE print_info_netcdf_input(self)
    !! Open a NetCDF file and get a variable id
 
@@ -290,6 +399,18 @@ SUBROUTINE print_info_netcdf_input(self)
    do n=1,self%ndims
       write(*,*) '      ',self%dimids(n),self%dimlens(n),trim(self%cord_names(n))
    end do
+!KB   select case (self%xtype)
+!KB      case (NF90_FLOAT)
+         if(self%scale_factor_real32 /= 1._real32 .or. self%add_offset_real32 /= 0._real32) then
+            write(*,*) '   scale(real32)= ',self%scale_factor_real32
+            write(*,*) '   offset(real32)=',self%add_offset_real32
+         end if
+!KB      case (NF90_DOUBLE)
+         if(self%scale_factor_real64 /= 1._real64 .or. self%add_offset_real64 /= 0._real64) then
+            write(*,*) '   scale(real64)= ',self%scale_factor_real64
+            write(*,*) '   offset(real64)=',self%add_offset_real64
+         end if
+!KB   end select
    if (self%time_var_id .ne. -1) then
       write(*,*) 'associated time information'
       write(*,*) '   time_dim_id= ',self%time_dim_id
@@ -382,58 +503,69 @@ SUBROUTINE get_netcdf_input(self,error_handler)
       call check(nf90_get_var(self%ncid,self%varid,self%p1dreal64, &
                               start=self%start(1:self%ndims), &
                               count=self%count(1:self%ndims)))
-!      if(self%scale_factor_int32 \= 1._int32 .or. &
-!         self%add_offset_int32 \= 0._int32) then
-#if 0
-      stat = nf90_get_att(self%ncid, self%varid, "scale_factor", &
-                          self%scale_factor_real64)
-      stat = nf90_get_att(self%ncid, self%varid, "add_offset", &
-                          self%add_offset_real64)
-      if(self%scale_factor_real64 /= 1._real64 .or. &
-         self%add_offset_real64 /= 0._real64) then
-         self%p1dreal64 = self%scale_factor_real64*self%p1dreal64 &
-                         +self%add_offset_real64
+      if(self%scale_factor_real64 /= 1._real64 .or. self%add_offset_real64 /= 0._real64) then
+         self%p1dreal64 = self%scale_factor_real64*self%p1dreal64 + self%add_offset_real64
       end if
-           write(*,*) self%p1dreal64
-           stop
-#endif
    end if
    if (associated(self%p2dreal64)) then
       call check(nf90_get_var(self%ncid, self%varid, self%p2dreal64, &
                               start=self%start(1:self%ndims), &
                               count=self%count(1:self%ndims)))
-#if 0
-      stat = nf90_get_att(self%ncid, self%varid, "scale_factor", &
-                          self%scale_factor_real64)
-      stat = nf90_get_att(self%ncid, self%varid, "add_offset", &
-                          self%add_offset_real64)
-!      if(self%scale_factor_real32 \= 1._real32 .or. &
-!         self%add_offset_real32 \= 0._real32) then
-      if(self%scale_factor_real64 /= 1._real64 .or. &
-         self%add_offset_real64 /= 0._real64) then
-         self%p2dreal64 = self%scale_factor_real64*self%p2dreal64 &
-                         +self%add_offset_real64
+      if(self%scale_factor_real64 /= 1._real64 .or. self%add_offset_real64 /= 0._real64) then
+         self%p2dreal64 = self%scale_factor_real64*self%p2dreal64 + self%add_offset_real64
       end if
-#endif
    end if
    if (associated(self%p3dreal64)) then
       call check(nf90_get_var(self%ncid, self%varid, self%p3dreal64, &
                               start=self%start(1:self%ndims), &
                               count=self%count(1:self%ndims)))
-#if 0
-      stat = nf90_get_att(self%ncid, self%varid, "scale_factor", &
-                          self%scale_factor_real64)
-      stat = nf90_get_att(self%ncid, self%varid, "add_offset", &
-                          self%add_offset_real64)
-      if(self%scale_factor_real64 /= 1._real64 .or. &
-         self%add_offset_real64 /= 0._real64) then
-         self%p3dreal64 = self%scale_factor_real64*self%p3dreal64 &
-                         +self%add_offset_real64
+      if(self%scale_factor_real64 /= 1._real64 .or. self%add_offset_real64 /= 0._real64) then
+         self%p3dreal64 = self%scale_factor_real64*self%p3dreal64 + self%add_offset_real64
       end if
-#endif
+   end if
+   if (associated(self%p4dreal64)) then
+      call check(nf90_get_var(self%ncid, self%varid, self%p3dreal64, &
+                              start=self%start(1:self%ndims), &
+                              count=self%count(1:self%ndims)))
+      if(self%scale_factor_real64 /= 1._real64 .or. self%add_offset_real64 /= 0._real64) then
+         self%p4dreal64 = self%scale_factor_real64*self%p4dreal64 + self%add_offset_real64
+      end if
    end if
    return
 END SUBROUTINE get_netcdf_input
+
+!-----------------------------------------------------------------------------
+
+SUBROUTINE get_prev(self,stat)
+   !! Get the previous field in the file
+
+   IMPLICIT NONE
+
+! Subroutine arguments
+   class(type_netcdf_input), intent(inout) :: self
+   integer, intent(inout) :: stat
+
+! Local constants
+
+! Local variables
+!   integer, dimension(:), allocatable :: start, count
+   integer :: n
+!-----------------------------------------------------------------------------
+   if (self%cur == -1) then
+     self%cur = 1 ! first data set to read
+   else
+      self%cur=self%cur-1
+   end if
+   if (self%cur .lt. 1) then
+      stat=1
+      return
+   end if
+   self%start(self%time_index)=self%cur
+   self%count(self%time_index)=1
+   call self%get()
+   stat=0
+   return
+END SUBROUTINE get_prev
 
 !-----------------------------------------------------------------------------
 
@@ -467,6 +599,47 @@ SUBROUTINE get_next(self,stat)
    stat=0
    return
 END SUBROUTINE get_next
+
+!-----------------------------------------------------------------------------
+
+SUBROUTINE get_attime(self,t,stat,kurt)
+   !! Get the field at a specified time
+
+   IMPLICIT NONE
+
+! Subroutine arguments
+   class(type_netcdf_input), intent(inout) :: self
+   type(datetime) :: t
+   integer, intent(inout) :: stat
+   integer, intent(in), optional :: kurt
+
+! Local constants
+
+! Local variables
+   integer :: n
+   logical :: found
+!-----------------------------------------------------------------------------
+!   do n=1,len(self%datetimes)
+#if 0
+! use binary search
+   found = .false.
+   n = 1
+   do while (.not. found)
+      found = (t == self%datetimes(n))
+   end do
+#else
+   do n=1,size(self%datetimes)
+!KB      write(*,*) n
+      if (t == self%datetimes(n)) exit
+   end do
+#endif
+   self%cur = n
+   self%start(self%time_index)=self%cur
+   self%count(self%time_index)=1
+   call self%get()
+   stat=0
+   return
+END SUBROUTINE get_attime
 
 !-----------------------------------------------------------------------------
 

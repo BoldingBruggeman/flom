@@ -126,8 +126,13 @@ SUBROUTINE initialize_input(self,domain,S,T)
       end if
       call self%Tinput(n)%initialize()
 
+#if 0
       self%Sinput(n)%p3dreal64 => S
       self%Tinput(n)%p3dreal64 => T
+#else
+      call self%Sinput(n)%link_data(S)
+      call self%Tinput(n)%link_data(T)
+#endif
    end do
    return
 END SUBROUTINE initialize_input
