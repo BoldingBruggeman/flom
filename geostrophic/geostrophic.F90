@@ -71,16 +71,14 @@ SUBROUTINE geostrophic_settings(self)
 !---------------------------------------------------------------------------
    self%logs%prepend = ''
    call self%logs%info('geostrophic_settings()')
-   CALL get_environment_variable("WOA_DIR", self%input%datadir, status=stat, &
-                                 trim_name=.true.)
+   CALL get_environment_variable("WOA_DIR", self%input%datadir, status=stat, trim_name=.true.)
    if (stat == 1) then
       write(*,*) 'Need to set WOA_DIR to the folder where WOA data are stored'
       stop 1
    end if
    call self%logs%info('World Ocean Atlas data:',level=1)
    call self%logs%info('data directory: ',msg2=trim(self%input%datadir),level=2)
-   CALL get_environment_variable("WOA_RESOLUTION", self%input%resolution, &
-                                 status=stat)
+   CALL get_environment_variable("WOA_RESOLUTION", self%input%resolution, status=stat)
    if (stat == 0) then
       select case (self%input%resolution(1:1))
          case ('l')
@@ -225,8 +223,6 @@ SUBROUTINE geostrophic_integrate(self)
       else where
          self%physics%salinity%sa = -9999._real64
       end where
-!KBwrite(*,*) self%domain%A%lon
-!KBstop
       call self%physics%salinity%update()
       call self%physics%temperature%update()
       call self%physics%density%calculate(self%physics%salinity%sa, &
