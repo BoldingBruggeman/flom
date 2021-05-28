@@ -143,6 +143,8 @@ MODULE input_module
       contains
 
       procedure :: configure => configure_netcdf_input
+      procedure :: open => open_netcdf_input
+      procedure :: dimlen => get_netcdf_dimlen
       procedure :: initialize => initialize_netcdf_input
       procedure :: print_info => print_info_netcdf_input
 !      procedure, deferred :: get => get_netcdf_input
@@ -188,18 +190,62 @@ SUBROUTINE configure_netcdf_input(self,start,count)
       allocate(self%count(size(count)))
       self%count=count
    end if
-   return
 END SUBROUTINE configure_netcdf_input
 
 !-----------------------------------------------------------------------------
 
-SUBROUTINE initialize_netcdf_input(self)
+SUBROUTINE open_netcdf_input(self,ncid)
+   !! Open a NetCDF file for read access
+
+   IMPLICIT NONE
+
+!  Subroutine arguments
+   class(type_netcdf_input), intent(inout) :: self
+   integer, intent(inout), optional :: ncid
+
+!  Local constants
+
+!  Local variables
+!-----------------------------------------------------------------------------
+   if (present(ncid)) then
+      call check( nf90_open(trim(self%f), NF90_NOWRITE, ncid) )
+   else
+      call check( nf90_open(trim(self%f), NF90_NOWRITE, self%ncid) )
+   end if
+END SUBROUTINE open_netcdf_input
+
+!-----------------------------------------------------------------------------
+
+SUBROUTINE get_netcdf_dimlen(self,n,len)
+   !! Open a NetCDF file for read access
+
+   IMPLICIT NONE
+
+!  Subroutine arguments
+   class(type_netcdf_input), intent(inout) :: self
+   character(len=*), intent(in) :: n
+   integer, intent(inout) :: len
+
+!  Local constants
+
+!  Local variables
+   integer :: dimid
+!-----------------------------------------------------------------------------
+   call check( nf90_inq_dimid(self%ncid,trim(n),dimid) )
+   call check( nf90_inquire_dimension(self%ncid,dimid,len=len) )
+END SUBROUTINE get_netcdf_dimlen
+
+!-----------------------------------------------------------------------------
+
+SUBROUTINE initialize_netcdf_input(self,ncid,varname)
    !! Open a NetCDF file and get a variable id
 
    IMPLICIT NONE
 
 !  Subroutine arguments
    class(type_netcdf_input), intent(inout) :: self
+   integer, intent(inout), optional :: ncid
+   character(len=*), intent(in), optional :: varname
 
 !  Local constants
 
@@ -218,7 +264,11 @@ SUBROUTINE initialize_netcdf_input(self)
     self%strp_format = '%Y-%m-%d %H:%M:%S'
 
    ! open the NetCDF file
-   call check( nf90_open(trim(self%f), NF90_NOWRITE, self%ncid) )
+   if (ncid == -1) then
+      call check( nf90_open(trim(self%f), NF90_NOWRITE, self%ncid) )
+   else
+      self%ncid=ncid
+   end if
 
    ! check existence of the variable in the file
    call check(nf90_inq_varid(self%ncid, trim(self%v), self%varid), error_handler=rc)
@@ -306,7 +356,6 @@ SUBROUTINE initialize_netcdf_input(self)
    else
       self%time_var_id=-1; self%timelen=-1
    end if
-   return
 END SUBROUTINE initialize_netcdf_input
 
 !-----------------------------------------------------------------------------
@@ -316,7 +365,6 @@ SUBROUTINE link_data_1d_int32(self,a)
    integer, dimension(:), target :: a
    integer :: stat
    self%p1dint32 => a
-   return
 END SUBROUTINE link_data_1d_int32
 
 SUBROUTINE link_data_2d_int32(self,a)
@@ -324,7 +372,6 @@ SUBROUTINE link_data_2d_int32(self,a)
    integer, dimension(:,:), target :: a
    integer :: stat
    self%p2dint32 => a
-   return
 END SUBROUTINE link_data_2d_int32
 
 SUBROUTINE link_data_3d_int32(self,a)
@@ -332,7 +379,6 @@ SUBROUTINE link_data_3d_int32(self,a)
    integer, dimension(:,:,:), target :: a
    integer :: stat
    self%p3dint32 => a
-   return
 END SUBROUTINE link_data_3d_int32
 
 SUBROUTINE link_data_4d_int32(self,a)
@@ -340,7 +386,6 @@ SUBROUTINE link_data_4d_int32(self,a)
    integer, dimension(:,:,:,:), target :: a
    integer :: stat
    self%p4dint32 => a
-   return
 END SUBROUTINE link_data_4d_int32
 
 SUBROUTINE link_data_1d_real64(self,a)
@@ -348,7 +393,6 @@ SUBROUTINE link_data_1d_real64(self,a)
    real(real64), dimension(:), target :: a
    integer :: stat
    self%p1dreal64 => a
-   return
 END SUBROUTINE link_data_1d_real64
 
 SUBROUTINE link_data_2d_real64(self,a)
@@ -356,7 +400,6 @@ SUBROUTINE link_data_2d_real64(self,a)
    real(real64), dimension(:,:), target :: a
    integer :: stat
    self%p2dreal64 => a
-   return
 END SUBROUTINE link_data_2d_real64
 
 SUBROUTINE link_data_3d_real64(self,a)
@@ -364,7 +407,6 @@ SUBROUTINE link_data_3d_real64(self,a)
    real(real64), dimension(:,:,:), target :: a
    integer :: stat
    self%p3dreal64 => a
-   return
 END SUBROUTINE link_data_3d_real64
 
 SUBROUTINE link_data_4d_real64(self,a)
@@ -372,7 +414,6 @@ SUBROUTINE link_data_4d_real64(self,a)
    real(real64), dimension(:,:,:,:), target :: a
    integer :: stat
    self%p4dreal64 => a
-   return
 END SUBROUTINE link_data_4d_real64
 
 !-----------------------------------------------------------------------------
@@ -443,7 +484,6 @@ SUBROUTINE print_info_netcdf_input(self)
    do n=1,self%ndims
       write(*,*) '   start, count= ',self%start(n),self%count(n)
    end do
-   return
 END SUBROUTINE print_info_netcdf_input
 
 !-----------------------------------------------------------------------------
@@ -480,7 +520,6 @@ SUBROUTINE datetime_conversion(epoch,timeunit,times,datetimes)
       t=dt+times*30._real64
    end if
    datetimes=num2date(t)
-   return
 END SUBROUTINE datetime_conversion
 
 !-----------------------------------------------------------------------------
@@ -499,6 +538,29 @@ SUBROUTINE get_netcdf_input(self,error_handler)
 ! Local variables
   integer :: stat
 !-----------------------------------------------------------------------------
+   ! reading integers
+   if (associated(self%p1dint32)) then
+      call check(nf90_get_var(self%ncid,self%varid,self%p1dint32, &
+                              start=self%start(1:self%ndims), &
+                              count=self%count(1:self%ndims)))
+   end if
+   if (associated(self%p2dint32)) then
+      call check(nf90_get_var(self%ncid, self%varid, self%p2dint32, &
+                              start=self%start(1:self%ndims), &
+                              count=self%count(1:self%ndims)))
+   end if
+   if (associated(self%p3dint32)) then
+      call check(nf90_get_var(self%ncid, self%varid, self%p3dint32, &
+                              start=self%start(1:self%ndims), &
+                              count=self%count(1:self%ndims)))
+   end if
+   if (associated(self%p4dint32)) then
+      call check(nf90_get_var(self%ncid, self%varid, self%p3dint32, &
+                              start=self%start(1:self%ndims), &
+                              count=self%count(1:self%ndims)))
+   end if
+
+   ! reading doubles
    if (associated(self%p1dreal64)) then
       call check(nf90_get_var(self%ncid,self%varid,self%p1dreal64, &
                               start=self%start(1:self%ndims), &
@@ -531,7 +593,6 @@ SUBROUTINE get_netcdf_input(self,error_handler)
          self%p4dreal64 = self%scale_factor_real64*self%p4dreal64 + self%add_offset_real64
       end if
    end if
-   return
 END SUBROUTINE get_netcdf_input
 
 !-----------------------------------------------------------------------------
@@ -564,7 +625,6 @@ SUBROUTINE get_prev(self,stat)
    self%count(self%time_index)=1
    call self%get()
    stat=0
-   return
 END SUBROUTINE get_prev
 
 !-----------------------------------------------------------------------------
@@ -597,7 +657,6 @@ SUBROUTINE get_next(self,stat)
    self%count(self%time_index)=1
    call self%get()
    stat=0
-   return
 END SUBROUTINE get_next
 
 !-----------------------------------------------------------------------------
@@ -638,7 +697,6 @@ SUBROUTINE get_attime(self,t,stat,kurt)
    self%count(self%time_index)=1
    call self%get()
    stat=0
-   return
 END SUBROUTINE get_attime
 
 !-----------------------------------------------------------------------------
@@ -657,7 +715,6 @@ SUBROUTINE close_netcdf_input(self)
 !-----------------------------------------------------------------------------
    call check( nf90_close(self%ncid) )
    self%ncid=-1
-   return
 END SUBROUTINE close_netcdf_input
 
 !-----------------------------------------------------------------------------
@@ -674,7 +731,6 @@ subroutine  check(status,error_handler)
         stop "Stopped"
       end if
    end if
-   return
 end subroutine check
 
 !-----------------------------------------------------------------------------
