@@ -93,8 +93,8 @@ SUBROUTINE logging_info(self, msg, level, msg2, silent)
    self%nlog = self%nlog+1
 !KB   write(20,*) self%global_info_silence
    if (self%global_info_silence) return
-   if (present(silent) .and. silent) then
-      return
+   if (present(silent)) then
+      if (silent) return
    end if
    if (present(level)) then
       n = level
