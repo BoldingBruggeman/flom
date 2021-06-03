@@ -38,7 +38,7 @@ MODULE input_module
       !! author: Karsten Bolding
       !! version: v0.1
 
-      character(len=256) :: f
+      character(len=256) :: f=''
         !! Input file name
       integer :: format
          !! ASCII, NetCDF, ....
@@ -101,7 +101,7 @@ MODULE input_module
 
       character(len=32) :: v
         !! NetCDF variable name
-      integer, private :: ncid
+      integer, private :: ncid=-1
         !! NetCDF id
       integer, private :: varid
         !! variable id
@@ -431,8 +431,12 @@ SUBROUTINE print_info_netcdf_input(self)
 !  Local variables
    integer :: n
 !-----------------------------------------------------------------------------
-   write(*,*) 'reading from file: '
-   write(*,*) '   ',trim(self%f)
+   if (self%f == '') then
+      write(*,*) 'reading from an open file'
+   else
+      write(*,*) 'reading from file: '
+      write(*,*) '   ',trim(self%f)
+   end if
    write(*,*) '   ncid= ',self%ncid
    write(*,*) 'variable:          ',trim(self%v)
    write(*,*) '   varid=',self%varid
