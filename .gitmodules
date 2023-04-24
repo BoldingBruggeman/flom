@@ -1,9 +1,9 @@
 [submodule "extern/GSW-Fortran"]
 	path = extern/GSW-Fortran
-	url = https://github.com/TEOS-10/GSW-Fortran.git
+	url = ../../TEOS-10/GSW-Fortran.git
 [submodule "extern/flexout"]
 	path = extern/flexout
 	url = ../flexout
 [submodule "extern/datetime-fortran"]
 	path = extern/datetime-fortran
-	url = https://github.com/wavebitscientific/datetime-fortran.git
+	url = ../../wavebitscientific/datetime-fortran.git
